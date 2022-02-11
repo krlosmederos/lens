@@ -14,10 +14,11 @@ import { nodesStore } from "../+nodes/nodes.store";
 import { ChartData, PieChart } from "../chart";
 import { ClusterNoMetrics } from "./cluster-no-metrics";
 import { bytesToUnits, cssNames } from "../../utils";
-import { ThemeStore } from "../../theme.store";
 import { getMetricLastPoints } from "../../../common/k8s-api/endpoints/metrics.api";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import clusterOverviewStoreInjectable from "./cluster-overview-store/cluster-overview-store.injectable";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import activeThemeInjectable from "../../themes/active.injectable";
 
 function createLabels(rawLabelData: [string, number | undefined][]): string[] {
   return rawLabelData.map(([key, value]) => `${key}: ${value?.toFixed(2) || "N/A"}`);
@@ -25,9 +26,13 @@ function createLabels(rawLabelData: [string, number | undefined][]): string[] {
 
 interface Dependencies {
   clusterOverviewStore: ClusterOverviewStore;
+  activeTheme: ActiveTheme;
 }
 
-const NonInjectedClusterPieCharts = observer(({ clusterOverviewStore }: Dependencies) => {
+const NonInjectedClusterPieCharts = observer(({
+  clusterOverviewStore,
+  activeTheme,
+}: Dependencies) => {
   const renderLimitWarning = () => {
     return (
       <div className="node-warning flex gaps align-center">
@@ -44,7 +49,7 @@ const NonInjectedClusterPieCharts = observer(({ clusterOverviewStore }: Dependen
     const { podUsage, podAllocatableCapacity, podCapacity } = data;
     const cpuLimitsOverload = cpuLimits > cpuAllocatableCapacity;
     const memoryLimitsOverload = memoryLimits > memoryAllocatableCapacity;
-    const defaultColor = ThemeStore.getInstance().activeTheme.colors.pieChartDefaultColor;
+    const defaultColor = activeTheme.value.colors.pieChartDefaultColor;
 
     if (!memoryCapacity || !cpuCapacity || !podCapacity || !memoryAllocatableCapacity || !cpuAllocatableCapacity || !podAllocatableCapacity) return null;
     const cpuData: ChartData = {
@@ -239,12 +244,9 @@ const NonInjectedClusterPieCharts = observer(({ clusterOverviewStore }: Dependen
   );
 });
 
-export const ClusterPieCharts = withInjectables<Dependencies>(
-  NonInjectedClusterPieCharts,
-
-  {
-    getProps: (di) => ({
-      clusterOverviewStore: di.inject(clusterOverviewStoreInjectable),
-    }),
-  },
-);
+export const ClusterPieCharts = withInjectables<Dependencies>(NonInjectedClusterPieCharts, {
+  getProps: (di) => ({
+    clusterOverviewStore: di.inject(clusterOverviewStoreInjectable),
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
+});

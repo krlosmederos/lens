@@ -3,8 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { StorageHelper } from "../../../utils";
-import { DockTabStorageState, DockTabStore } from "../dock-tab-store/dock-tab.store";
+import { DockTabStore } from "../dock-tab.store";
 import type { TabId } from "../dock/store";
 import type { KubeObject } from "../../../../common/k8s-api/kube-object";
 import { apiManager } from "../../../../common/k8s-api/api-manager";
@@ -16,17 +15,7 @@ export interface EditingResource {
   firstDraft?: string;
 }
 
-interface Dependencies {
-  createStorage:<T> (storageKey: string, options: DockTabStorageState<T>) => StorageHelper<DockTabStorageState<T>>;
-}
-
 export class EditResourceTabStore extends DockTabStore<EditingResource> {
-  constructor(protected dependencies: Dependencies) {
-    super(dependencies, {
-      storageKey: "edit_resource_store",
-    });
-  }
-
   protected finalizeDataForSave({ draft, ...data }: EditingResource): EditingResource {
     return data; // skip saving draft to local-storage
   }

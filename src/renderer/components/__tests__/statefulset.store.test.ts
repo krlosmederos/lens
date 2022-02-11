@@ -3,10 +3,13 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable } from "mobx";
-import { podsStore } from "../+workloads-pods/pods.store";
-import { statefulSetStore } from "../+workloads-statefulsets/statefulset.store";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
+import type { StatefulSetStore } from "../+workloads-statefulsets/store";
+import statefulSetStoreInjectable from "../+workloads-statefulsets/store.injectable";
 import { StatefulSet, Pod } from "../../../common/k8s-api/endpoints";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
+import createStoresAndApisInjectable from "../../vars/is-cluster-page-context.injectable";
 
 const runningStatefulSet = new StatefulSet({
   apiVersion: "foo",
@@ -115,9 +118,19 @@ failedPod.status = {
 };
 
 describe("StatefulSet Store tests", () => {
+  let podStore: PodStore;
+  let statefulSetStore: StatefulSetStore;
+
   beforeAll(() => {
+    const di = getDiForUnitTesting();
+
+    di.override(createStoresAndApisInjectable, () => true);
+
+    podStore = di.inject(podStoreInjectable);
+    statefulSetStore = di.inject(statefulSetStoreInjectable);
+
     // Add pods to pod store
-    podsStore.items = observable.array([
+    podStore.items.replace([
       runningPod,
       failedPod,
       pendingPod,

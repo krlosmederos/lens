@@ -4,13 +4,21 @@
  */
 
 import { getAppVersion } from "../../common/utils";
-import { asLegacyGlobalFunctionForExtensionApi } from "../as-legacy-globals-for-extension-api/as-legacy-global-function-for-extension-api";
-import getEnabledExtensionsInjectable from "./get-enabled-extensions/get-enabled-extensions.injectable";
+import getEnabledExtensionNamesInjectable from "../../common/extensions/preferences/get-enabled.injectable";
 import * as Preferences from "./user-preferences";
+import { asLegacyGlobalForExtensionApi } from "../di-legacy-globals/for-extension-api";
+import isSnapInjectable from "../../common/vars/is-snap.injectable";
+import { appName, slackUrl, issuesTrackerUrl } from "../../common/vars";
+import isLinuxInjectable from "../../common/vars/is-linux.injectable";
+import isMacInjectable from "../../common/vars/is-mac.injectable";
+import isWindowsInjectable from "../../common/vars/is-windows.injectable";
 
 export const version = getAppVersion();
-export { isSnap, isWindows, isMac, isLinux, appName, slackUrl, issuesTrackerUrl } from "../../common/vars";
+export const isSnap = asLegacyGlobalForExtensionApi(isSnapInjectable);
+export const isWindows = asLegacyGlobalForExtensionApi(isWindowsInjectable);
+export const isMac = asLegacyGlobalForExtensionApi(isMacInjectable);
+export const isLinux = asLegacyGlobalForExtensionApi(isLinuxInjectable);
 
-export const getEnabledExtensions = asLegacyGlobalFunctionForExtensionApi(getEnabledExtensionsInjectable);
+export const getEnabledExtensions = asLegacyGlobalForExtensionApi(getEnabledExtensionNamesInjectable);
 
-export { Preferences };
+export { Preferences, appName, slackUrl, issuesTrackerUrl };

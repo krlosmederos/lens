@@ -5,10 +5,11 @@
 
 import { action, observable, reaction, when, makeObservable } from "mobx";
 import { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
-import { Cluster, clusterApi, getMetricsByNodeNames, type IClusterMetrics } from "../../../../common/k8s-api/endpoints";
-import { autoBind, StorageHelper } from "../../../utils";
-import { type IMetricsReqParams, normalizeMetrics } from "../../../../common/k8s-api/endpoints/metrics.api";
+import { Cluster, ClusterApi, getMetricsByNodeNames, IClusterMetrics } from "../../../../common/k8s-api/endpoints";
+import { autoBind } from "../../../utils";
+import { IMetricsReqParams, normalizeMetrics } from "../../../../common/k8s-api/endpoints/metrics.api";
 import { nodesStore } from "../../+nodes/nodes.store";
+import type { StorageLayer } from "../../../utils/storage/create.injectable";
 
 export enum MetricType {
   MEMORY = "memory",
@@ -26,12 +27,10 @@ export interface ClusterOverviewStorageState {
 }
 
 interface Dependencies {
-  storage: StorageHelper<ClusterOverviewStorageState>;
+  storage: StorageLayer<ClusterOverviewStorageState>;
 }
 
 export class ClusterOverviewStore extends KubeObjectStore<Cluster> implements ClusterOverviewStorageState {
-  api = clusterApi;
-
   @observable metrics: Partial<IClusterMetrics> = {};
   @observable metricsLoaded = false;
 
@@ -51,11 +50,10 @@ export class ClusterOverviewStore extends KubeObjectStore<Cluster> implements Cl
     this.dependencies.storage.merge({ metricNodeRole: value });
   }
 
-  constructor(private dependencies: Dependencies ) {
-    super();
+  constructor(private dependencies: Dependencies, api: ClusterApi) {
+    super(api);
     makeObservable(this);
     autoBind(this);
-
     this.init();
   }
 

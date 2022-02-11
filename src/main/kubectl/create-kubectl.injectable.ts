@@ -3,25 +3,22 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { Kubectl } from "./kubectl";
+import { Kubectl, KubectlDependencies } from "./kubectl";
 import directoryForKubectlBinariesInjectable from "./directory-for-kubectl-binaries/directory-for-kubectl-binaries.injectable";
-import userStoreInjectable from "../../common/user-store/user-store.injectable";
+import userPreferencesStoreInjectable from "../user-preferences/store.injectable";
+
+export type CreateKubectl = (clusterVersion: string) => Kubectl;
+
+const createKubectl = (deps: KubectlDependencies): CreateKubectl => (
+  (version) => new Kubectl(deps, version)
+);
 
 const createKubectlInjectable = getInjectable({
+  instantiate: (di) => createKubectl({
+    userStore: di.inject(userPreferencesStoreInjectable),
+    directoryForKubectlBinaries: di.inject(directoryForKubectlBinariesInjectable),
+  }),
   id: "create-kubectl",
-
-  instantiate: (di) => {
-    const dependencies = {
-      userStore: di.inject(userStoreInjectable),
-
-      directoryForKubectlBinaries: di.inject(
-        directoryForKubectlBinariesInjectable,
-      ),
-    };
-
-    return (clusterVersion: string) =>
-      new Kubectl(dependencies, clusterVersion);
-  },
 });
 
 export default createKubectlInjectable;

@@ -10,11 +10,14 @@ import { isDebugging } from "../vars";
 import logger from "../../main/logger";
 import { inspect } from "util";
 
-export interface IKubeObjectRef {
+export interface KubeObjectRef {
   kind: string;
   apiVersion: string;
   name: string;
   namespace?: string;
+  uid?: string;
+  resourceVersion?: string;
+  fieldPath?: string;
 }
 
 export interface IKubeApiLinkRef {

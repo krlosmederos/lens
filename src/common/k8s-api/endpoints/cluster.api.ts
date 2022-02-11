@@ -5,12 +5,18 @@
 
 import { IMetrics, IMetricsReqParams, metricsApi } from "./metrics.api";
 import { KubeObject } from "../kube-object";
-import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { DerivedKubeApiOptions, IgnoredKubeApiOptions, KubeApi } from "../kube-api";
 
 export class ClusterApi extends KubeApi<Cluster> {
   static kind = "Cluster";
   static namespaced = true;
+
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Cluster,
+    });
+  }
 }
 
 export function getMetricsByNodeNames(nodeNames: string[], params?: IMetricsReqParams): Promise<IClusterMetrics> {
@@ -44,20 +50,20 @@ export enum ClusterStatus {
   ERROR = "Error",
 }
 
-export interface IClusterMetrics<T = IMetrics> {
-  [metric: string]: T;
-  memoryUsage: T;
-  memoryRequests: T;
-  memoryLimits: T;
-  memoryCapacity: T;
-  cpuUsage: T;
-  cpuRequests: T;
-  cpuLimits: T;
-  cpuCapacity: T;
-  podUsage: T;
-  podCapacity: T;
-  fsSize: T;
-  fsUsage: T;
+export interface IClusterMetrics {
+  [metric: string]: IMetrics;
+  memoryUsage: IMetrics;
+  memoryRequests: IMetrics;
+  memoryLimits: IMetrics;
+  memoryCapacity: IMetrics;
+  cpuUsage: IMetrics;
+  cpuRequests: IMetrics;
+  cpuLimits: IMetrics;
+  cpuCapacity: IMetrics;
+  podUsage: IMetrics;
+  podCapacity: IMetrics;
+  fsSize: IMetrics;
+  fsUsage: IMetrics;
 }
 
 export interface Cluster {
@@ -106,18 +112,3 @@ export class Cluster extends KubeObject {
     return ClusterStatus.ACTIVE;
   }
 }
-
-/**
- * Only available within kubernetes cluster pages
- */
-let clusterApi: ClusterApi;
-
-if (isClusterPageContext()) { // initialize automatically only when within a cluster iframe/context
-  clusterApi = new ClusterApi({
-    objectConstructor: Cluster,
-  });
-}
-
-export {
-  clusterApi,
-};

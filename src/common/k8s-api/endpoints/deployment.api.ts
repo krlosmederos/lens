@@ -7,14 +7,20 @@ import moment from "moment";
 
 import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
 import { autoBind } from "../../utils";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, IgnoredKubeApiOptions, KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
-import type { IPodMetrics } from "./pods.api";
+import type { IPodMetrics } from "./pod.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 import type { LabelSelector } from "../kube-object";
 
 export class DeploymentApi extends KubeApi<Deployment> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Deployment,
+    });
+  }
+
   protected getScaleApiUrl(params: { namespace: string; name: string }) {
     return `${this.getUrl(params)}/scale`;
   }
@@ -223,15 +229,3 @@ export class Deployment extends WorkloadKubeObject {
     return this.spec.replicas || 0;
   }
 }
-
-let deploymentApi: DeploymentApi;
-
-if (isClusterPageContext()) {
-  deploymentApi = new DeploymentApi({
-    objectConstructor: Deployment,
-  });
-}
-
-export {
-  deploymentApi,
-};

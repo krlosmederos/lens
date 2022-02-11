@@ -8,7 +8,8 @@
 import { Agent as HttpAgent } from "http";
 import { Agent as HttpsAgent } from "https";
 import { merge } from "lodash";
-import fetch, { Response, RequestInit } from "node-fetch";
+import type { Response, RequestInit } from "node-fetch";
+import fetch from "node-fetch";
 import { stringify } from "querystring";
 import { EventEmitter } from "../../common/event-emitter";
 import logger from "../../common/logger";
@@ -44,7 +45,17 @@ export interface JsonApiConfig {
 const httpAgent = new HttpAgent({ keepAlive: true });
 const httpsAgent = new HttpsAgent({ keepAlive: true });
 
-export class JsonApi<D = JsonApiData, P extends JsonApiParams = JsonApiParams> {
+export interface JsonApiHandler<D, P extends JsonApiParams = JsonApiParams> {
+  readonly config: JsonApiConfig;
+  get<T = D>(path: string, params?: P, reqInit?: RequestInit): Promise<T>;
+  post<T = D>(path: string, params?: P, reqInit?: RequestInit): Promise<T>;
+  put<T = D>(path: string, params?: P, reqInit?: RequestInit): Promise<T>;
+  patch<T = D>(path: string, params?: P, reqInit?: RequestInit): Promise<T>;
+  del<T = D>(path: string, params?: P, reqInit?: RequestInit): Promise<T>;
+  getResponse(path: string, params?: P, reqInit?: RequestInit): Promise<Response>;
+}
+
+export class JsonApi<D = JsonApiData, P extends JsonApiParams = JsonApiParams> implements JsonApiHandler<D, P> {
   static reqInitDefault: RequestInit = {
     headers: {
       "content-type": "application/json",

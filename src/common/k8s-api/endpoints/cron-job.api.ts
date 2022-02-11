@@ -5,14 +5,20 @@
 
 import moment from "moment";
 import { KubeObject } from "../kube-object";
-import type { IPodContainer } from "./pods.api";
+import type { IPodContainer } from "./pod.api";
 import { formatDuration } from "../../utils/formatDuration";
 import { autoBind } from "../../utils";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 
 export class CronJobApi extends KubeApi<CronJob> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: CronJob,
+      ...opts,
+    });
+  }
+
   suspend(params: { namespace: string; name: string }) {
     return this.request.patch(this.getUrl(params), {
       data: {
@@ -124,18 +130,3 @@ export class CronJob extends KubeObject {
     return this.spec.suspend;
   }
 }
-
-/**
- * Only available within kubernetes cluster pages
- */
-let cronJobApi: CronJobApi;
-
-if (isClusterPageContext()) {
-  cronJobApi = new CronJobApi({
-    objectConstructor: CronJob,
-  });
-}
-
-export {
-  cronJobApi,
-};

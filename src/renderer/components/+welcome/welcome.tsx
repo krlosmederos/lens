@@ -11,10 +11,9 @@ import Carousel from "react-material-ui-carousel";
 import { Icon } from "../icon";
 import { productName, slackUrl } from "../../../common/vars";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import welcomeMenuItemsInjectable from "./welcome-menu-items/welcome-menu-items.injectable";
-import type { WelcomeMenuRegistration } from "./welcome-menu-items/welcome-menu-registration";
-import welcomeBannerItemsInjectable from "./welcome-banner-items/welcome-banner-items.injectable";
-import type { WelcomeBannerRegistration } from "./welcome-banner-items/welcome-banner-registration";
+import welcomeMenuItemsInjectable, { type WelcomeMenuRegistration } from "./menu-items.injectable";
+import welcomeBannerItemsInjectable from "./banner-items.injectable";
+import type { WelcomeBannerRegistration } from "./banner-items.injectable";
 
 export const defaultWidth = 320;
 

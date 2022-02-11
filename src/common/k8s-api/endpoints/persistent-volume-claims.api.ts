@@ -3,15 +3,25 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { KubeObject, LabelSelector } from "../kube-object";
+import type { LabelSelector } from "../kube-object";
+import { KubeObject } from "../kube-object";
 import { autoBind } from "../../utils";
-import { IMetrics, metricsApi } from "./metrics.api";
-import type { Pod } from "./pods.api";
+import type { IMetrics } from "./metrics.api";
+import { metricsApi } from "./metrics.api";
+import type { Pod } from "./pod.api";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export class PersistentVolumeClaimsApi extends KubeApi<PersistentVolumeClaim> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: PersistentVolumeClaim,
+    });
+  }
 }
 
 export function getMetricsForPvc(pvc: PersistentVolumeClaim): Promise<IPvcMetrics> {
@@ -94,14 +104,6 @@ export class PersistentVolumeClaim extends KubeObject {
   }
 }
 
-let pvcApi: PersistentVolumeClaimsApi;
-
-if (isClusterPageContext()) {
-  pvcApi = new PersistentVolumeClaimsApi({
-    objectConstructor: PersistentVolumeClaim,
-  });
-}
-
-export {
-  pvcApi,
-};
+export const pvcApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new PersistentVolumeClaimsApi()
+  : undefined;

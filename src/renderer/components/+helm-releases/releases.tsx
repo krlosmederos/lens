@@ -19,7 +19,7 @@ import { NamespaceSelectFilter } from "../+namespaces/namespace-select-filter";
 import { kebabCase } from "lodash/fp";
 import { HelmReleaseMenu } from "./release-menu";
 import type { ItemStore } from "../../../common/item.store";
-import { ReleaseRollbackDialog } from "./release-rollback-dialog";
+import { ReleaseRollbackDialog } from "./dialogs/rollback/view";
 import { ReleaseDetails } from "./release-details/release-details";
 import removableReleasesInjectable from "./removable-releases.injectable";
 import type { RemovableHelmRelease } from "./removable-releases";
@@ -223,15 +223,11 @@ class NonInjectedHelmReleases extends Component<Dependencies & Props> {
   }
 }
 
-export const HelmReleases = withInjectables<Dependencies, Props>(
-  NonInjectedHelmReleases,
-
-  {
-    getProps: (di, props) => ({
-      releases: di.inject(removableReleasesInjectable),
-      releasesArePending: di.inject(releasesInjectable).pending,
-      selectNamespace: di.inject(namespaceStoreInjectable).selectNamespaces,
-      ...props,
-    }),
-  },
-);
+export const HelmReleases = withInjectables<Dependencies, Props>(NonInjectedHelmReleases, {
+  getProps: (di, props) => ({
+    ...props,
+    releases: di.inject(removableReleasesInjectable),
+    releasesArePending: di.inject(releasesInjectable).pending,
+    selectNamespace: di.inject(namespaceStoreInjectable).selectNamespaces,
+  }),
+});

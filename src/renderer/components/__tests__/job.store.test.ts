@@ -4,8 +4,8 @@
  */
 
 import { observable } from "mobx";
-import { jobStore } from "../+workloads-jobs/job.store";
-import { podsStore } from "../+workloads-pods/pods.store";
+import { jobStore } from "../+workloads-jobs/store";
+import { podsStore } from "../+workloads-pods/store";
 import { Job, Pod } from "../../../common/k8s-api/endpoints";
 
 const runningJob = new Job({

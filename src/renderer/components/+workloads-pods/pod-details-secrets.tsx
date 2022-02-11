@@ -6,18 +6,24 @@
 import "./pod-details-secrets.scss";
 
 import React, { Component } from "react";
-import { Link } from "react-router-dom";
 import { autorun, observable, makeObservable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { Pod, Secret, secretsApi } from "../../../common/k8s-api/endpoints";
-import { getDetailsUrl } from "../kube-detail-params";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import { prevDefault } from "../../utils";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
 
-interface Props {
+export interface PodDetailsSecretsProps {
   pod: Pod;
 }
 
+interface Dependencies {
+  showDetails: ShowDetails;
+}
+
 @observer
-export class PodDetailsSecrets extends Component<Props> {
+class NonInjectedPodDetailsSecrets extends Component<PodDetailsSecretsProps & Dependencies> {
   @observable secrets: Map<string, Secret> = observable.map<string, Secret>();
 
   componentDidMount(): void {
@@ -37,38 +43,42 @@ export class PodDetailsSecrets extends Component<Props> {
     ]);
   }
 
-  constructor(props: Props) {
+  constructor(props: PodDetailsSecretsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
 
   render() {
-    const { pod } = this.props;
+    const { pod, showDetails } = this.props;
 
     return (
       <div className="PodDetailsSecrets">
         {
-          pod.getSecrets().map(secretName => {
-            const secret = this.secrets.get(secretName);
+          pod.getSecrets()
+            .map(secretName => {
+              const secret = this.secrets.get(secretName);
 
-            if (secret) {
-              return this.renderSecretLink(secret);
-            } else {
-              return (
-                <span key={secretName}>{secretName}</span>
-              );
-            }
-          })
+              return secret
+                ? (
+                  <a onClick={prevDefault(() => showDetails(secret))}>
+                    {secretName}
+                  </a>
+                )
+                : (
+                  <span key={secretName}>
+                    {secretName}
+                  </span>
+                );
+            })
         }
       </div>
     );
   }
-
-  protected renderSecretLink(secret: Secret) {
-    return (
-      <Link key={secret.getId()} to={getDetailsUrl(secret.selfLink)}>
-        {secret.getName()}
-      </Link>
-    );
-  }
 }
+
+export const PodDetailsSecrets = withInjectables<Dependencies, PodDetailsSecretsProps>(NonInjectedPodDetailsSecrets, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});

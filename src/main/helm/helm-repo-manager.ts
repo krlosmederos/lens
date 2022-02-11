@@ -63,7 +63,7 @@ export class HelmRepoManager extends Singleton {
   }
 
   private async ensureInitialized() {
-    helmCli.setLogger(logger);
+    helmCli.logger = logger;
     await helmCli.ensureBinary();
 
     this.helmEnv ??= await this.parseHelmEnv();

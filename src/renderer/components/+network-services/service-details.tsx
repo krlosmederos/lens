@@ -15,15 +15,14 @@ import { KubeObjectMeta } from "../kube-object-meta";
 import { ServicePortComponent } from "./service-port-component";
 import { endpointStore } from "../+network-endpoints/endpoints.store";
 import { ServiceDetailsEndpoint } from "./service-details-endpoint";
-import type { PortForwardStore } from "../../port-forward";
+import type { PortForwardStore } from "../../port-forward/store";
 import logger from "../../../common/logger";
 import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import type { Disposer } from "../../../common/utils";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import kubeWatchApiInjectable
-  from "../../kube-watch-api/kube-watch-api.injectable";
-import portForwardStoreInjectable from "../../port-forward/port-forward-store/port-forward-store.injectable";
+
+import portForwardStoreInjectable from "../../port-forward/store.injectable";
 import type { KubeWatchSubscribeStoreOptions } from "../../kube-watch-api/kube-watch-api";
 
 interface Props extends KubeObjectDetailsProps<Service> {
@@ -142,7 +141,7 @@ export const ServiceDetails = withInjectables<Dependencies, Props>(
 
   {
     getProps: (di, props) => ({
-      subscribeStores: di.inject(kubeWatchApiInjectable).subscribeStores,
+      subscribeStores: di.inject(subscribeStoresInjectable),
       portForwardStore: di.inject(portForwardStoreInjectable),
       ...props,
     }),

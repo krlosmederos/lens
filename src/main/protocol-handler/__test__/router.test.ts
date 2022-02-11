@@ -5,20 +5,15 @@
 
 import * as uuid from "uuid";
 
-import { broadcastMessage } from "../../../common/ipc";
-import { ProtocolHandlerExtension, ProtocolHandlerInternal } from "../../../common/protocol-handler";
 import { delay, noop } from "../../../common/utils";
 import { LensExtension } from "../../../extensions/main-api";
-import { ExtensionsStore } from "../../../extensions/extensions-store/extensions-store";
-import type { LensProtocolRouterMain } from "../lens-protocol-router-main/lens-protocol-router-main";
+import type { ExtensionsPreferencesStore } from "../../../common/extensions/preferences/store";
+import type { LensProtocolRouterMain } from "../router";
 import mockFs from "mock-fs";
 import { getDiForUnitTesting } from "../../getDiForUnitTesting";
-import extensionLoaderInjectable
-  from "../../../extensions/extension-loader/extension-loader.injectable";
-import lensProtocolRouterMainInjectable
-  from "../lens-protocol-router-main/lens-protocol-router-main.injectable";
-import extensionsStoreInjectable
-  from "../../../extensions/extensions-store/extensions-store.injectable";
+import extensionsLoaderInjectable from "../../../common/extensions/loader/loader.injectable";
+import lensProtocolRouterMainInjectable from "../router.injectable";
+import extensionsPreferencesStoreInjectable from "../../extensions/store.injectable";
 
 jest.mock("../../../common/ipc");
 
@@ -33,7 +28,7 @@ describe("protocol router tests", () => {
   // Unit tests are allowed to only public interfaces.
   let extensionLoader: any;
   let lpr: LensProtocolRouterMain;
-  let extensionsStore: ExtensionsStore;
+  let extensionsStore: ExtensionsPreferencesStore;
 
   beforeEach(async () => {
     const di = getDiForUnitTesting({ doGeneralOverrides: true });
@@ -44,10 +39,8 @@ describe("protocol router tests", () => {
 
     await di.runSetups();
 
-    extensionLoader = di.inject(extensionLoaderInjectable);
-    extensionsStore = di.inject(extensionsStoreInjectable);
-
-
+    extensionLoader = di.inject(extensionsLoaderInjectable);
+    extensionsStore = di.inject(extensionsPreferencesStoreInjectable);
     lpr = di.inject(lensProtocolRouterMainInjectable);
 
     lpr.rendererLoaded = true;
@@ -55,10 +48,6 @@ describe("protocol router tests", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-
-    // TODO: Remove Singleton from BaseStore to achieve independent unit testing
-    ExtensionsStore.resetInstance();
-
     mockFs.restore();
   });
 

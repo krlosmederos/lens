@@ -10,7 +10,6 @@ import requestPromise from "request-promise-native";
 import { ensureDir, pathExists } from "fs-extra";
 import path from "path";
 import { noop } from "lodash";
-import { isLinux, isMac } from "../src/common/vars";
 
 class KubectlDownloader {
   public kubectlVersion: string;
@@ -105,10 +104,10 @@ const baseDir = path.join(__dirname, "..", "binaries", "client");
 
 const downloads = [];
 
-if (isMac) {
+if (process.platform === "darwin") {
   downloads.push({ platform: "darwin", arch: "amd64", target: path.join(baseDir, "darwin", "x64", "kubectl") });
   downloads.push({ platform: "darwin", arch: "arm64", target: path.join(baseDir, "darwin", "arm64", "kubectl") });
-} else if (isLinux) {
+} else if (process.platform === "linux") {
   downloads.push({ platform: "linux", arch: "amd64", target: path.join(baseDir, "linux", "x64", "kubectl") });
   downloads.push({ platform: "linux", arch: "arm64", target: path.join(baseDir, "linux", "arm64", "kubectl") });
 } else {

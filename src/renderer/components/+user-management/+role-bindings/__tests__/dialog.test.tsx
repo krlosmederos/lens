@@ -7,12 +7,11 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { clusterRolesStore } from "../../+cluster-roles/store";
 import { ClusterRole } from "../../../../../common/k8s-api/endpoints";
-import { RoleBindingDialog } from "../dialog";
+import { RoleBindingDialog } from "../dialog/view";
 import { getDiForUnitTesting } from "../../../../getDiForUnitTesting";
 import type { DiRender } from "../../../test-utils/renderFor";
 import { renderFor } from "../../../test-utils/renderFor";
-import directoryForUserDataInjectable
-  from "../../../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
+import directoryForUserDataInjectable from "../../../../../common/paths/user-data.injectable";
 
 jest.mock("../../+cluster-roles/store");
 

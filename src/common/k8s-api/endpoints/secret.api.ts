@@ -6,8 +6,10 @@
 import { KubeObject } from "../kube-object";
 import type { KubeJsonApiData } from "../kube-json-api";
 import { autoBind } from "../../utils";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export enum SecretType {
   Opaque = "Opaque",
@@ -54,14 +56,15 @@ export class Secret extends KubeObject {
   }
 }
 
-let secretsApi: KubeApi<Secret>;
-
-if (isClusterPageContext()) {
-  secretsApi = new KubeApi({
-    objectConstructor: Secret,
-  });
+export class SecretsApi extends KubeApi<Secret> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: Secret,
+      ...opts,
+    });
+  }
 }
 
-export {
-  secretsApi,
-};
+export const secretsApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new SecretsApi()
+  : undefined;

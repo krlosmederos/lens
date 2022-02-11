@@ -5,9 +5,11 @@
 
 import { autoBind } from "../../utils";
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export interface PodSecurityPolicy {
   spec: {
@@ -102,14 +104,15 @@ export class PodSecurityPolicy extends KubeObject {
   }
 }
 
-let pspApi: KubeApi<PodSecurityPolicy>;
-
-if (isClusterPageContext()) {
-  pspApi = new KubeApi({
-    objectConstructor: PodSecurityPolicy,
-  });
+export class PodSecurityPolicyApi extends KubeApi<PodSecurityPolicy> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: PodSecurityPolicy,
+    });
+  }
 }
 
-export {
-  pspApi,
-};
+export const pspApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new PodSecurityPolicyApi()
+  : undefined;

@@ -5,10 +5,12 @@
 
 import { autoBind } from "../../utils";
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
 import { get } from "lodash";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export interface IEndpointPort {
   name?: string;
@@ -134,14 +136,15 @@ export class Endpoint extends KubeObject {
 
 }
 
-let endpointApi: KubeApi<Endpoint>;
-
-if (isClusterPageContext()) {
-  endpointApi = new KubeApi<Endpoint>({
-    objectConstructor: Endpoint,
-  });
+export class EndpointApi extends KubeApi<Endpoint> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: Endpoint,
+      ...opts,
+    });
+  }
 }
 
-export {
-  endpointApi,
-};
+export const endpointApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new EndpointApi()
+  : undefined;

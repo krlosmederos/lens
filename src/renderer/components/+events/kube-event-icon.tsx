@@ -8,51 +8,61 @@ import "./kube-event-icon.scss";
 import React from "react";
 import { Icon } from "../icon";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
-import { eventStore } from "./event.store";
 import { cssNames } from "../../utils";
-import type { KubeEvent } from "../../../common/k8s-api/endpoints/events.api";
+import type { KubeEvent } from "../../../common/k8s-api/endpoints/kube-event.api";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import { observer } from "mobx-react";
+import type { KubeEventStore } from "./store";
+import kubeEventStoreInjectable from "./store.injectable";
 
-interface Props {
+export interface KubeEventIconProps {
   object: KubeObject;
   showWarningsOnly?: boolean;
   filterEvents?: (events: KubeEvent[]) => KubeEvent[];
 }
 
-const defaultProps: Partial<Props> = {
-  showWarningsOnly: true,
-};
-
-export class KubeEventIcon extends React.Component<Props> {
-  static defaultProps = defaultProps as object;
-
-  render() {
-    const { object, showWarningsOnly, filterEvents } = this.props;
-    const events = eventStore.getEventsByObject(object);
-    let warnings = events.filter(evt => evt.isWarning());
-
-    if (filterEvents) warnings = filterEvents(warnings);
-
-    if (!events.length || (showWarningsOnly && !warnings.length)) {
-      return null;
-    }
-    const event = [...warnings, ...events][0]; // get latest event
-
-    return (
-      <Icon
-        material="warning"
-        className={cssNames("KubeEventIcon", { warning: event.isWarning() })}
-        tooltip={{
-          children: (
-            <div className="KubeEventTooltip">
-              <div className="msg">{event.message}</div>
-              <div className="age">
-                <Icon material="access_time"/>
-                {event.getAge(undefined, undefined, true)}
-              </div>
-            </div>
-          ),
-        }}
-      />
-    );
-  }
+interface Dependencies {
+  kubeEventStore: KubeEventStore;
 }
+
+const NonInjectedKubeEventIcon = observer(({
+  kubeEventStore,
+  object,
+  showWarningsOnly = true,
+  filterEvents,
+}: Dependencies & KubeEventIconProps) => {
+  const events = kubeEventStore.getEventsByObject(object);
+  let warnings = events.filter(evt => evt.isWarning());
+
+  if (filterEvents) warnings = filterEvents(warnings);
+
+  if (!events.length || (showWarningsOnly && !warnings.length)) {
+    return null;
+  }
+  const event = [...warnings, ...events][0]; // get latest event
+
+  return (
+    <Icon
+      material="warning"
+      className={cssNames("KubeEventIcon", { warning: event.isWarning() })}
+      tooltip={{
+        children: (
+          <div className="KubeEventTooltip">
+            <div className="msg">{event.message}</div>
+            <div className="age">
+              <Icon material="access_time"/>
+              {event.getAge(undefined, undefined, true)}
+            </div>
+          </div>
+        ),
+      }}
+    />
+  );
+});
+
+export const KubeEventIcon = withInjectables<Dependencies, KubeEventIconProps>(NonInjectedKubeEventIcon, {
+  getProps: (di, props) => ({
+    ...props,
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+  }),
+});

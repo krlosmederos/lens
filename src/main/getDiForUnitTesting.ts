@@ -7,57 +7,92 @@ import glob from "glob";
 import { memoize, kebabCase } from "lodash/fp";
 import { createContainer } from "@ogre-tools/injectable";
 
-import { setLegacyGlobalDiForExtensionApi } from "../extensions/as-legacy-globals-for-extension-api/legacy-global-di-for-extension-api";
-import getElectronAppPathInjectable from "./app-paths/get-electron-app-path/get-electron-app-path.injectable";
-import setElectronAppPathInjectable from "./app-paths/set-electron-app-path/set-electron-app-path.injectable";
-import appNameInjectable from "./app-paths/app-name/app-name.injectable";
-import registerChannelInjectable from "./app-paths/register-channel/register-channel.injectable";
-import writeJsonFileInjectable from "../common/fs/write-json-file.injectable";
-import readJsonFileInjectable from "../common/fs/read-json-file.injectable";
+import { setLegacyGlobalDiForExtensionApi } from "../extensions/di-legacy-globals/setup";
+import appNameInjectable from "./electron/app-name.injectable";
+import baseLoggerInjectable from "./logger/base-logger.injectable";
+import getAppPathInjectable from "./electron/get-app-path.injectable";
+import setAppPathInjectable from "./electron/set-app-path.injectable";
+import ipcMainInjectable from "./ipc/ipc-main.injectable";
+import type { GetDiForUnitTestingArgs } from "../test-utils/common-types";
+import { overrideFs } from "../test-utils/override-fs";
+import { registerInjectables } from "../test-utils/register-injectables";
+import { overrideStores } from "../test-utils/override-stores/main";
 
-export const getDiForUnitTesting = (
-  { doGeneralOverrides } = { doGeneralOverrides: false },
-) => {
+const getInjectableFilePaths = memoize(() => [
+  ...glob.sync(`${__dirname}/**/*.injectable.{ts,tsx}`),
+  ...glob.sync(`${__dirname}/../common/**/*.injectable.{ts,tsx}`),
+  ...glob.sync(`${__dirname}/../extensions/**/*.injectable.{ts,tsx}`),
+]);
+
+export function getDiForUnitTesting({
+  doGeneralOverrides = true,
+  doFileSystemOverrides = true,
+  doStoresOverrides = true,
+  doLoggingOverrides = true,
+}: GetDiForUnitTestingArgs = {}) {
   const di = createContainer();
 
   setLegacyGlobalDiForExtensionApi(di);
-
-  for (const filePath of getInjectableFilePaths()) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const injectableInstance = require(filePath).default;
-
-    di.register({
-      ...injectableInstance,
-      aliases: [injectableInstance, ...(injectableInstance.aliases || [])],
-    });
-  }
-
+  registerInjectables(di, getInjectableFilePaths);
   di.preventSideEffects();
 
+  if (doFileSystemOverrides) {
+    overrideFs(di);
+  }
+
+  if (doLoggingOverrides) {
+    di.override(baseLoggerInjectable, () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+    }));
+  }
+
   if (doGeneralOverrides) {
+    di.override(ipcMainInjectable, () => ({
+      on: jest.fn(),
+      off: jest.fn(),
+      invoke: jest.fn(),
+      once: jest.fn(),
+      postMessage: jest.fn(),
+      removeAllListeners: jest.fn(),
+      removeListener: jest.fn(),
+      addListener: jest.fn(),
+      send: jest.fn(),
+      sendSync: jest.fn(),
+      sendTo: jest.fn(),
+      sendToHost: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      emit: jest.fn(),
+      eventNames: jest.fn(),
+      listenerCount: jest.fn(),
+      listeners: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      rawListeners: jest.fn(),
+      handle: jest.fn(),
+      handleOnce: jest.fn(),
+      removeHandler: jest.fn(),
+    }));
+
     di.override(
-      getElectronAppPathInjectable,
+      getAppPathInjectable,
       () => (name: string) => `some-electron-app-path-for-${kebabCase(name)}`,
     );
 
-    di.override(setElectronAppPathInjectable, () => () => undefined);
+    di.override(setAppPathInjectable, () => () => undefined);
     di.override(appNameInjectable, () => "some-electron-app-name");
-    di.override(registerChannelInjectable, () => () => undefined);
+  }
 
-    di.override(writeJsonFileInjectable, () => () => {
-      throw new Error("Tried to write JSON file to file system without specifying explicit override.");
-    });
+  if (doStoresOverrides) {
+    const storesToSkip = Array.isArray(doStoresOverrides)
+      ? doStoresOverrides
+      : undefined;
 
-    di.override(readJsonFileInjectable, () => () => {
-      throw new Error("Tried to read JSON file from file system without specifying explicit override.");
-    });
+    overrideStores(di, storesToSkip);
   }
 
   return di;
-};
-
-const getInjectableFilePaths = memoize(() => [
-  ...glob.sync("./**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-  ...glob.sync("../extensions/**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-  ...glob.sync("../common/**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-]);
+}

@@ -9,7 +9,7 @@ import { action, observable, makeObservable } from "mobx";
 import { autoBind, iter } from "../utils";
 import type { KubeApi } from "./kube-api";
 import type { KubeObject } from "./kube-object";
-import { IKubeObjectRef, parseKubeApi, createKubeApiURL } from "./kube-api-parse";
+import { KubeObjectRef, parseKubeApi, createKubeApiURL } from "./kube-api-parse";
 
 export class ApiManager {
   private apis = observable.map<string, KubeApi<KubeObject>>();
@@ -79,7 +79,7 @@ export class ApiManager {
     return this.stores.get(this.resolveApi(api)?.apiBase) as S;
   }
 
-  lookupApiLink(ref: IKubeObjectRef, parentObject?: KubeObject): string {
+  lookupApiLink(ref: KubeObjectRef, parentObject?: KubeObject): string {
     const {
       kind, apiVersion, name,
       namespace = parentObject?.getNs(),
@@ -119,4 +119,7 @@ export class ApiManager {
   }
 }
 
+/**
+ * @deprecated use `di.inject(apiManagerInjectable)` instead
+ */
 export const apiManager = new ApiManager();

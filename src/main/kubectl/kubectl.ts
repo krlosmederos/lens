@@ -13,7 +13,7 @@ import { helmCli } from "../helm/helm-cli";
 import { getBundledKubectlVersion } from "../../common/utils/app-version";
 import { isDevelopment, isWindows, isTestEnv } from "../../common/vars";
 import { SemVer } from "semver";
-import { defaultPackageMirror, packageMirrors } from "../../common/user-store/preferences-helpers";
+import { defaultPackageMirror, packageMirrors } from "../../common/user-preferences/preferences-helpers";
 import got from "got/dist/source";
 import { promisify } from "util";
 import stream from "stream";
@@ -60,7 +60,7 @@ export function bundledKubectlPath(): string {
   return bundledPath;
 }
 
-interface Dependencies {
+export interface KubectlDependencies {
   directoryForKubectlBinaries: string;
 
   userStore: {
@@ -81,7 +81,7 @@ export class Kubectl {
   public static readonly bundledKubectlVersion: string = bundledVersion;
   public static invalidBundle = false;
 
-  constructor(private dependencies: Dependencies, clusterVersion: string) {
+  constructor(private dependencies: KubectlDependencies, clusterVersion: string) {
     let version: SemVer;
 
     try {

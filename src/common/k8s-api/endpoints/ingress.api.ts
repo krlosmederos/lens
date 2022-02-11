@@ -5,13 +5,22 @@
 
 import { KubeObject } from "../kube-object";
 import { autoBind } from "../../utils";
-import { IMetrics, metricsApi } from "./metrics.api";
+import type { IMetrics } from "./metrics.api";
+import { metricsApi } from "./metrics.api";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 import type { RequireExactlyOne } from "type-fest";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export class IngressApi extends KubeApi<Ingress> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Ingress,
+    });
+  }
 }
 
 export function getMetricsForIngress(ingress: string, namespace: string): Promise<IIngressMetrics> {
@@ -194,17 +203,10 @@ export class Ingress extends KubeObject {
   }
 }
 
-let ingressApi: IngressApi;
-
-if (isClusterPageContext()) {
-  ingressApi = new IngressApi({
-    objectConstructor: Ingress,
+export const ingressApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new IngressApi({
     // Add fallback for Kubernetes <1.19
     checkPreferredVersion: true,
     fallbackApiBases: ["/apis/extensions/v1beta1/ingresses"],
-  });
-}
-
-export {
-  ingressApi,
-};
+  })
+  : undefined;

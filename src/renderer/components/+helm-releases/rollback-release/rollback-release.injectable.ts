@@ -7,8 +7,6 @@ import { rollbackRelease } from "../../../../common/k8s-api/endpoints/helm-relea
 import releasesInjectable from "../releases.injectable";
 
 const rollbackReleaseInjectable = getInjectable({
-  id: "rollback-release",
-
   instantiate: (di) => {
     const releases = di.inject(releasesInjectable);
 
@@ -18,6 +16,7 @@ const rollbackReleaseInjectable = getInjectable({
       releases.invalidate();
     };
   },
+  id: "rollback-release",
 });
 
 export default rollbackReleaseInjectable;

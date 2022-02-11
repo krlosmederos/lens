@@ -7,12 +7,12 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import customResourcesRouteTabsInjectable, { type CustomResourceGroupTabLayoutRoute } from "./route-tabs.injectable";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 import { crdURL, crdRoute } from "../../../common/routes";
 import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 import type { SubscribeStores } from "../../kube-watch-api/kube-watch-api";
 import { crdStore } from "./crd.store";
@@ -22,11 +22,11 @@ export interface CustomResourcesSidebarItemProps {}
 
 interface Dependencies {
   routes: IComputedValue<CustomResourceGroupTabLayoutRoute[]>;
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
   subscribeStores: SubscribeStores;
 }
 
-const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResource, subscribeStores }: Dependencies & CustomResourcesSidebarItemProps) => {
+const NonInjectedCustomResourcesSidebarItem = observer(({ routes, allowedResources, subscribeStores }: Dependencies & CustomResourcesSidebarItemProps) => {
   useEffect(() => subscribeStores([
     crdStore,
   ]), []);
@@ -37,7 +37,7 @@ const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResou
       text="Custom Resources"
       url={crdURL()}
       isActive={isActiveRoute(crdRoute)}
-      isHidden={!isAllowedResource("customresourcedefinitions")}
+      isHidden={!allowedResources.has("customresourcedefinitions")}
       icon={<Icon material="extension"/>}
     >
       {routes.get().map((route) => (
@@ -69,7 +69,7 @@ const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResou
 export const CustomResourcesSidebarItem = withInjectables<Dependencies, CustomResourcesSidebarItemProps>(NonInjectedCustomResourcesSidebarItem, {
   getProps: (di, props) => ({
     routes: di.inject(customResourcesRouteTabsInjectable),
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
     subscribeStores: di.inject(subscribeStoresInjectable),
     ...props,
   }),

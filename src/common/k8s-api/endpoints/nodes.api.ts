@@ -5,12 +5,21 @@
 
 import { KubeObject } from "../kube-object";
 import { autoBind, cpuUnitsToNumber, iter, unitsToBytes } from "../../../renderer/utils";
-import { IMetrics, metricsApi } from "./metrics.api";
+import type { IMetrics } from "./metrics.api";
+import { metricsApi } from "./metrics.api";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
-export class NodesApi extends KubeApi<Node> {
+export class NodeApi extends KubeApi<Node> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Node,
+    });
+  }
 }
 
 export function getMetricsForAllNodes(): Promise<INodeMetrics> {
@@ -249,14 +258,6 @@ export class Node extends KubeObject {
   }
 }
 
-let nodesApi: NodesApi;
-
-if (isClusterPageContext()) {
-  nodesApi = new NodesApi({
-    objectConstructor: Node,
-  });
-}
-
-export {
-  nodesApi,
-};
+export const nodesApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new NodeApi()
+  : undefined;

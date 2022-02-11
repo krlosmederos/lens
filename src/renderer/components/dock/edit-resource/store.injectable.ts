@@ -4,13 +4,13 @@
  */
 import { getInjectable } from "@ogre-tools/injectable";
 import { EditResourceTabStore } from "./store";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
+import editResourceTabStorageInjectable from "./storage.injectable";
 
 const editResourceTabStoreInjectable = getInjectable({
   id: "edit-resource-tab-store",
 
   instantiate: (di) => new EditResourceTabStore({
-    createStorage: di.inject(createStorageInjectable),
+    storage: di.inject(editResourceTabStorageInjectable),
   }),
 });
 

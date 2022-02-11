@@ -11,7 +11,7 @@ import rendererExtensionsInjectable from "../../../../extensions/renderer-extens
 import { CatalogCategory } from "../../../api/catalog-entity";
 import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
 import type { AdditionalCategoryColumnRegistration, CategoryColumnRegistration } from "../custom-category-columns";
-import getCategoryColumnsInjectable, { CategoryColumns, GetCategoryColumnsParams } from "../get-category-columns.injectable";
+import getCategoryColumnsInjectable, { CategoryColumns, GetCategoryColumnsParams } from "../category-columns/get.injectable";
 
 class TestCategory extends CatalogCategory {
   apiVersion = "catalog.k8slens.dev/v1alpha1";

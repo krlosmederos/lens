@@ -4,8 +4,10 @@
  */
 
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export enum HpaMetricType {
   Resource = "Resource",
@@ -148,14 +150,15 @@ export class HorizontalPodAutoscaler extends KubeObject {
   }
 }
 
-let hpaApi: KubeApi<HorizontalPodAutoscaler>;
-
-if (isClusterPageContext()) {
-  hpaApi = new KubeApi<HorizontalPodAutoscaler>({
-    objectConstructor: HorizontalPodAutoscaler,
-  });
+export class HorizontalPodAutoscalerApi extends KubeApi<HorizontalPodAutoscaler> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: HorizontalPodAutoscaler,
+      ...opts,
+    });
+  }
 }
 
-export {
-  hpaApi,
-};
+export const hpaApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new HorizontalPodAutoscalerApi()
+  : undefined;

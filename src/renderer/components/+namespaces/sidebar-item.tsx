@@ -6,24 +6,24 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import { observer } from "mobx-react";
 import React from "react";
 import { namespacesRoute, namespacesURL } from "../../../common/routes";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 
 export interface NamespacesSidebarItemProps {}
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-const NonInjectedNamespacesSidebarItem = observer(({ isAllowedResource }: Dependencies & NamespacesSidebarItemProps) => (
+const NonInjectedNamespacesSidebarItem = observer(({ allowedResources }: Dependencies & NamespacesSidebarItemProps) => (
   <SidebarItem
     id="namespaces"
     text="Namespaces"
     isActive={isActiveRoute(namespacesRoute)}
-    isHidden={!isAllowedResource("namespaces")}
+    isHidden={!allowedResources.has("namespaces")}
     url={namespacesURL()}
     icon={<Icon material="layers"/>}
   />
@@ -31,7 +31,7 @@ const NonInjectedNamespacesSidebarItem = observer(({ isAllowedResource }: Depend
 
 export const NamespacesSidebarItem = withInjectables<Dependencies, NamespacesSidebarItemProps>(NonInjectedNamespacesSidebarItem, {
   getProps: (di, props) => ({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
     ...props,
   }),
 });

@@ -6,11 +6,10 @@
 import get from "lodash/get";
 import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
 import { autoBind } from "../../utils";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import type { IPodContainer, IPodMetrics } from "./pods.api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import type { IPodContainer, IPodMetrics } from "./pod.api";
 import type { LabelSelector } from "../kube-object";
 
 export class DaemonSet extends WorkloadKubeObject {
@@ -81,6 +80,12 @@ export class DaemonSet extends WorkloadKubeObject {
 }
 
 export class DaemonSetApi extends KubeApi<DaemonSet> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: DaemonSet,
+      ...opts,
+    });
+  }
 }
 
 export function getMetricsForDaemonSets(daemonsets: DaemonSet[], namespace: string, selector = ""): Promise<IPodMetrics> {
@@ -99,18 +104,3 @@ export function getMetricsForDaemonSets(daemonsets: DaemonSet[], namespace: stri
     namespace,
   });
 }
-
-/**
- * Only available within kubernetes cluster pages
- */
-let daemonSetApi: DaemonSetApi;
-
-if (isClusterPageContext()) {
-  daemonSetApi = new DaemonSetApi({
-    objectConstructor: DaemonSet,
-  });
-}
-
-export {
-  daemonSetApi,
-};

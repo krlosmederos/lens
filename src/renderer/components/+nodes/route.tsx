@@ -19,10 +19,12 @@ import kebabCase from "lodash/kebabCase";
 import upperFirst from "lodash/upperFirst";
 import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 import { Badge } from "../badge/badge";
-import { eventStore } from "../+events/event.store";
 import type { NodesRouteParams } from "../../../common/routes";
 import { makeObservable, observable } from "mobx";
 import isEmpty from "lodash/isEmpty";
+import type { KubeEventStore } from "../+events/store";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import kubeEventStoreInjectable from "../+events/store.injectable";
 
 enum columnId {
   name = "name",
@@ -37,7 +39,7 @@ enum columnId {
   status = "status",
 }
 
-interface Props extends RouteComponentProps<NodesRouteParams> {
+export interface NodesRouteProps extends RouteComponentProps<NodesRouteParams> {
 }
 
 type MetricsTooltipFormatter = (metrics: [number, number]) => string;
@@ -49,12 +51,16 @@ interface UsageArgs {
   formatters: MetricsTooltipFormatter[];
 }
 
+interface Dependencies {
+  kubeEventStore: KubeEventStore;
+}
+
 @observer
-export class NodesRoute extends React.Component<Props> {
+class NonInjectedNodesRoute extends React.Component<NodesRouteProps & Dependencies> {
   @observable.ref metrics: Partial<INodeMetrics> = {};
   private metricsWatcher = interval(30, async () => this.metrics = await getMetricsForAllNodes());
 
-  constructor(props: Props) {
+  constructor(props: NodesRouteProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -181,7 +187,7 @@ export class NodesRoute extends React.Component<Props> {
           className="Nodes"
           store={nodesStore}
           isReady={nodesStore.isLoaded}
-          dependentStores={[eventStore]}
+          dependentStores={[this.props.kubeEventStore]}
           isSelectable={false}
           sortingCallbacks={{
             [columnId.name]: node => node.getName(),
@@ -240,3 +246,10 @@ export class NodesRoute extends React.Component<Props> {
     );
   }
 }
+
+export const NodesRoute = withInjectables<Dependencies, NodesRouteProps>(NonInjectedNodesRoute, {
+  getProps: (di, props) => ({
+    ...props,
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+  }),
+});

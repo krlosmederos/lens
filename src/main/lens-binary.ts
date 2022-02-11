@@ -9,7 +9,7 @@ import request from "request";
 import { ensureDir, pathExists } from "fs-extra";
 import * as tar from "tar";
 import { isWindows } from "../common/vars";
-import type winston from "winston";
+import type { LensLogger } from "../common/logger";
 
 export type LensBinaryOpts = {
   version: string;
@@ -32,11 +32,10 @@ export class LensBinary {
   protected arch: string;
   protected originalBinaryName: string;
   protected requestOpts: request.Options;
-  protected logger: Console | winston.Logger;
+
+  public logger: LensLogger;
 
   constructor(opts: LensBinaryOpts) {
-    const baseDir = opts.baseDir;
-
     this.originalBinaryName = opts.originalBinaryName;
     this.binaryName = opts.newBinaryName || opts.originalBinaryName;
     this.binaryVersion = opts.version;
@@ -55,7 +54,7 @@ export class LensBinary {
     }
     this.arch = arch;
     this.platformName = isWindows ? "windows" : process.platform;
-    this.dirname = path.normalize(path.join(baseDir, this.binaryName));
+    this.dirname = path.normalize(path.join(opts.baseDir, this.binaryName));
 
     if (isWindows) {
       this.binaryName = `${this.binaryName}.exe`;
@@ -66,10 +65,6 @@ export class LensBinary {
     if (tarName) {
       this.tarPath = path.join(this.dirname, tarName);
     }
-  }
-
-  public setLogger(logger: Console | winston.Logger) {
-    this.logger = logger;
   }
 
   protected binaryDir() {
@@ -181,7 +176,7 @@ export class LensBinary {
     });
 
     stream.on("error", (error) => {
-      this.logger.error(error);
+      this.logger.error("failed to download binary", error);
       fs.unlink(binaryPath, () => {
         // do nothing
       });

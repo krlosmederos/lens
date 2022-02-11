@@ -5,9 +5,11 @@
 
 import { KubeObject } from "../kube-object";
 import type { KubeJsonApiData } from "../kube-json-api";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { autoBind } from "../../utils";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export interface ConfigMap {
   data: {
@@ -32,17 +34,15 @@ export class ConfigMap extends KubeObject {
   }
 }
 
-/**
- * Only available within kubernetes cluster pages
- */
-let configMapApi: KubeApi<ConfigMap>;
-
-if (isClusterPageContext()) {
-  configMapApi = new KubeApi({
-    objectConstructor: ConfigMap,
-  });
+export class ConfigMapApi extends KubeApi<ConfigMap> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: ConfigMap,
+      ...opts,
+    });
+  }
 }
 
-export {
-  configMapApi,
-};
+export const configMapApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new ConfigMapApi()
+  : undefined;

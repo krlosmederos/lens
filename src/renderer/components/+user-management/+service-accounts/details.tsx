@@ -8,7 +8,6 @@ import "./details.scss";
 import { autorun, observable, makeObservable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import React from "react";
-import { Link } from "react-router-dom";
 
 import { secretsStore } from "../../+config-secrets/secrets.store";
 import { Secret, SecretType, ServiceAccount } from "../../../../common/k8s-api/endpoints";
@@ -18,13 +17,20 @@ import type { KubeObjectDetailsProps } from "../../kube-object-details";
 import { KubeObjectMeta } from "../../kube-object-meta";
 import { Spinner } from "../../spinner";
 import { ServiceAccountsSecret } from "./secret";
-import { getDetailsUrl } from "../../kube-detail-params";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ShowDetails } from "../../kube-object/details/show.injectable";
+import showDetailsInjectable from "../../kube-object/details/show.injectable";
+import { prevDefault } from "../../../utils";
 
-interface Props extends KubeObjectDetailsProps<ServiceAccount> {
+export interface ServiceAccountsDetailsProps extends KubeObjectDetailsProps<ServiceAccount> {
+}
+
+interface Dependencies {
+  showDetails: ShowDetails;
 }
 
 @observer
-export class ServiceAccountsDetails extends React.Component<Props> {
+class NonInjectedServiceAccountsDetails extends React.Component<ServiceAccountsDetailsProps & Dependencies> {
   @observable secrets: Secret[];
   @observable imagePullSecrets: Secret[];
 
@@ -53,7 +59,7 @@ export class ServiceAccountsDetails extends React.Component<Props> {
     ]);
   }
 
-  constructor(props: Props) {
+  constructor(props: ServiceAccountsDetailsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -81,6 +87,8 @@ export class ServiceAccountsDetails extends React.Component<Props> {
   }
 
   renderSecretLinks(secrets: Secret[]) {
+    const { showDetails } = this.props;
+
     return secrets.map((secret) => {
       if (secret.getId() === null) {
         return (
@@ -95,9 +103,9 @@ export class ServiceAccountsDetails extends React.Component<Props> {
       }
 
       return (
-        <Link key={secret.getId()} to={getDetailsUrl(secret.selfLink)}>
+        <a key={secret.getId()} onClick={prevDefault(() => showDetails(secret))}>
           {secret.getName()}
-        </Link>
+        </a>
       );
     });
   }
@@ -151,3 +159,10 @@ export class ServiceAccountsDetails extends React.Component<Props> {
     );
   }
 }
+
+export const ServiceAccountsDetails = withInjectables<Dependencies, ServiceAccountsDetailsProps>(NonInjectedServiceAccountsDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});

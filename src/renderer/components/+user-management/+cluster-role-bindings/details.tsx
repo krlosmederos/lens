@@ -12,23 +12,31 @@ import React from "react";
 import type { ClusterRoleBinding, ClusterRoleBindingSubject } from "../../../../common/k8s-api/endpoints";
 import { autoBind, ObservableHashSet, prevDefault } from "../../../utils";
 import { AddRemoveButtons } from "../../add-remove-buttons";
-import { ConfirmDialog } from "../../confirm-dialog";
 import { DrawerTitle } from "../../drawer";
 import type { KubeObjectDetailsProps } from "../../kube-object-details";
 import { KubeObjectMeta } from "../../kube-object-meta";
 import { Table, TableCell, TableHead, TableRow } from "../../table";
-import { ClusterRoleBindingDialog } from "./dialog";
 import { clusterRoleBindingsStore } from "./store";
 import { hashClusterRoleBindingSubject } from "./hashers";
+import type { OpenClusterRoleBindingDialog } from "./dialog/open.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import openClusterRoleBindingDialogInjectable from "./dialog/open.injectable";
+import type { OpenConfirmDialog } from "../../confirm-dialog/open.injectable";
+import openConfirmDialogInjectable from "../../confirm-dialog/open.injectable";
 
-interface Props extends KubeObjectDetailsProps<ClusterRoleBinding> {
+export interface ClusterRoleBindingDetailsProps extends KubeObjectDetailsProps<ClusterRoleBinding> {
+}
+
+interface Dependencies {
+  openClusterRoleBindingDialog: OpenClusterRoleBindingDialog;
+  openConfirmDialog: OpenConfirmDialog;
 }
 
 @observer
-export class ClusterRoleBindingDetails extends React.Component<Props> {
+class NonInjectedClusterRoleBindingDetails extends React.Component<ClusterRoleBindingDetailsProps & Dependencies> {
   selectedSubjects = new ObservableHashSet<ClusterRoleBindingSubject>([], hashClusterRoleBindingSubject);
 
-  constructor(props: Props) {
+  constructor(props: ClusterRoleBindingDetailsProps & Dependencies) {
     super(props);
     autoBind(this);
   }
@@ -42,10 +50,10 @@ export class ClusterRoleBindingDetails extends React.Component<Props> {
   }
 
   removeSelectedSubjects() {
-    const { object: clusterRoleBinding } = this.props;
+    const { object: clusterRoleBinding, openConfirmDialog } = this.props;
     const { selectedSubjects } = this;
 
-    ConfirmDialog.open({
+    openConfirmDialog({
       ok: () => clusterRoleBindingsStore.removeSubjects(clusterRoleBinding, selectedSubjects),
       labelOk: `Remove`,
       message: (
@@ -114,7 +122,7 @@ export class ClusterRoleBindingDetails extends React.Component<Props> {
         )}
 
         <AddRemoveButtons
-          onAdd={() => ClusterRoleBindingDialog.open(clusterRoleBinding)}
+          onAdd={() => this.props.openClusterRoleBindingDialog(clusterRoleBinding)}
           onRemove={selectedSubjects.size ? this.removeSelectedSubjects : null}
           addTooltip={`Add bindings to ${roleRef.name}`}
           removeTooltip={`Remove selected bindings from ${roleRef.name}`}
@@ -123,3 +131,11 @@ export class ClusterRoleBindingDetails extends React.Component<Props> {
     );
   }
 }
+
+export const ClusterRoleBindingDetails = withInjectables<Dependencies, ClusterRoleBindingDetailsProps>(NonInjectedClusterRoleBindingDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    openClusterRoleBindingDialog: di.inject(openClusterRoleBindingDialogInjectable),
+    openConfirmDialog: di.inject(openConfirmDialogInjectable),
+  }),
+});

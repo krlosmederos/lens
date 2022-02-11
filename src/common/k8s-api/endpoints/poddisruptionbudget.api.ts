@@ -4,10 +4,13 @@
  */
 
 import { autoBind } from "../../utils";
-import { KubeObject, LabelSelector } from "../kube-object";
+import type { LabelSelector } from "../kube-object";
+import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export interface PodDisruptionBudget {
   spec: {
@@ -57,14 +60,15 @@ export class PodDisruptionBudget extends KubeObject {
 
 }
 
-let pdbApi: KubeApi<PodDisruptionBudget>;
-
-if (isClusterPageContext()) {
-  pdbApi = new KubeApi({
-    objectConstructor: PodDisruptionBudget,
-  });
+export class PodDisruptionBudgetApi extends KubeApi<PodDisruptionBudget> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: PodDisruptionBudget,
+    });
+  }
 }
 
-export {
-  pdbApi,
-};
+export const pdbApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new PodDisruptionBudgetApi()
+  : undefined;

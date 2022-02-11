@@ -9,22 +9,22 @@ import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import { workloadURL } from "../../../common/routes";
 import { ResourceNames } from "../../utils/rbac";
 import type { NamespaceStore } from "../+namespaces/namespace-store/namespace.store";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
 
 interface Dependencies {
   workloadStores: Map<KubeResource, KubeObjectStore<KubeObject>>;
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
   namespaceStore: NamespaceStore;
 }
 
 export const workloads = ({
   workloadStores,
-  isAllowedResource,
+  allowedResources,
   namespaceStore,
 }: Dependencies) =>
   computed(() =>
     [...workloadStores.entries()]
-      .filter(([resource]) => isAllowedResource(resource))
+      .filter(([resource]) => allowedResources.has(resource))
       .map(([resource, store]) => {
         const items = store.getAllByNs(namespaceStore.contextNamespaces);
 

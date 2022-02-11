@@ -6,30 +6,36 @@
 import "./config-map-details.scss";
 
 import React from "react";
-import { autorun, makeObservable, observable } from "mobx";
+import { autorun, observable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { DrawerTitle } from "../drawer";
-import { Notifications } from "../notifications";
 import { Input } from "../input";
 import { Button } from "../button";
 import { configMapsStore } from "./config-maps.store";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
 import { ConfigMap } from "../../../common/k8s-api/endpoints";
 import { KubeObjectMeta } from "../kube-object-meta";
-import logger from "../../../common/logger";
+import type { LensLogger } from "../../../common/logger";
+import type { OkNotification } from "../notifications/ok.injectable";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import errorNotificationInjectable from "../notifications/error.injectable";
+import okNotificationInjectable from "../notifications/ok.injectable";
+import configMapsLoggerInjectable from "./logger.injectable";
 
-interface Props extends KubeObjectDetailsProps<ConfigMap> {
+export interface ConfigMapDetailsProps extends KubeObjectDetailsProps<ConfigMap> {
+}
+
+interface Dependencies {
+  okNotification: OkNotification;
+  errorNotification: ErrorNotification;
+  logger: LensLogger;
 }
 
 @observer
-export class ConfigMapDetails extends React.Component<Props> {
-  @observable isSaving = false;
-  @observable data = observable.map<string, string>();
-
-  constructor(props: Props) {
-    super(props);
-    makeObservable(this);
-  }
+class NonInjectedConfigMapDetails extends React.Component<ConfigMapDetailsProps & Dependencies> {
+  private readonly isSaving = observable.box(false);
+  private readonly data = observable.map<string, string>();
 
   async componentDidMount() {
     disposeOnUnmount(this, [
@@ -47,20 +53,20 @@ export class ConfigMapDetails extends React.Component<Props> {
     const { object: configMap } = this.props;
 
     try {
-      this.isSaving = true;
+      this.isSaving.set(true);
       await configMapsStore.update(configMap, {
         ...configMap,
         data: Object.fromEntries(this.data),
       });
-      Notifications.ok(
+      this.props.okNotification(
         <p>
           <>ConfigMap <b>{configMap.getName()}</b> successfully updated.</>
         </p>,
       );
     } catch (error) {
-      Notifications.error(`Failed to save config map: ${error}`);
+      this.props.errorNotification(`Failed to save config map: ${error}`);
     } finally {
-      this.isSaving = false;
+      this.isSaving.set(false);
     }
   };
 
@@ -72,7 +78,7 @@ export class ConfigMapDetails extends React.Component<Props> {
     }
 
     if (!(configMap instanceof ConfigMap)) {
-      logger.error("[ConfigMapDetails]: passed object that is not an instanceof ConfigMap", configMap);
+      this.props.logger.error("passed object that is not an instanceof ConfigMap", configMap);
 
       return null;
     }
@@ -104,7 +110,8 @@ export class ConfigMapDetails extends React.Component<Props> {
               }
               <Button
                 primary
-                label="Save" waiting={this.isSaving}
+                label="Save"
+                waiting={this.isSaving.get()}
                 className="save-btn"
                 onClick={this.save}
               />
@@ -115,3 +122,12 @@ export class ConfigMapDetails extends React.Component<Props> {
     );
   }
 }
+
+export const ConfigMapDetails = withInjectables<Dependencies, ConfigMapDetailsProps>(NonInjectedConfigMapDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    errorNotification: di.inject(errorNotificationInjectable),
+    okNotification: di.inject(okNotificationInjectable),
+    logger: di.inject(configMapsLoggerInjectable),
+  }),
+});

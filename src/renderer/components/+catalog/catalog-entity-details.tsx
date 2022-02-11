@@ -7,7 +7,6 @@ import styles from "./catalog-entity-details.module.scss";
 import React, { Component } from "react";
 import { observer } from "mobx-react";
 import { Drawer, DrawerItem } from "../drawer";
-import type { CatalogCategory, CatalogEntity } from "../../../common/catalog";
 import { Icon } from "../icon";
 import { CatalogEntityDrawerMenu } from "./catalog-entity-drawer-menu";
 import { CatalogEntityDetailRegistry } from "../../../extensions/registries";
@@ -15,6 +14,7 @@ import { isDevelopment } from "../../../common/vars";
 import { cssNames } from "../../utils";
 import { Avatar } from "../avatar";
 import { getLabelBadges } from "./helpers";
+import type { CatalogEntity } from "../../../common/catalog/entity/entity";
 
 interface Props<T extends CatalogEntity> {
   entity: T;
@@ -24,14 +24,6 @@ interface Props<T extends CatalogEntity> {
 
 @observer
 export class CatalogEntityDetails<T extends CatalogEntity> extends Component<Props<T>> {
-  categoryIcon(category: CatalogCategory) {
-    if (Icon.isSvg(category.metadata.icon)) {
-      return <Icon svg={category.metadata.icon} smallest />;
-    } else {
-      return <Icon material={category.metadata.icon} smallest />;
-    }
-  }
-
   renderContent(entity: T) {
     const { onRun, hideDetails } = this.props;
     const detailItems = CatalogEntityDetailRegistry.getInstance().getItemsForKind(entity.kind, entity.apiVersion);

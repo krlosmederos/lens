@@ -5,14 +5,20 @@
 
 import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
 import { autoBind } from "../../utils";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
-import type { IPodMetrics } from "./pods.api";
+import type { IPodMetrics } from "./pod.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 import type { LabelSelector } from "../kube-object";
 
 export class StatefulSetApi extends KubeApi<StatefulSet> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: StatefulSet,
+      ...opts,
+    });
+  }
+
   protected getScaleApiUrl(params: { namespace: string; name: string }) {
     return `${this.getUrl(params)}/scale`;
   }
@@ -135,15 +141,3 @@ export class StatefulSet extends WorkloadKubeObject {
     return containers.map(container => container.image);
   }
 }
-
-let statefulSetApi: StatefulSetApi;
-
-if (isClusterPageContext()) {
-  statefulSetApi = new StatefulSetApi({
-    objectConstructor: StatefulSet,
-  });
-}
-
-export {
-  statefulSetApi,
-};

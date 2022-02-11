@@ -10,47 +10,58 @@ import { Table, TableHead, TableCell, TableRow } from "../table";
 import { prevDefault } from "../../utils";
 import { endpointStore } from "../+network-endpoints/endpoints.store";
 import { Spinner } from "../spinner";
-import { showDetails } from "../kube-detail-params";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
 
-interface Props {
+export interface ServiceDetailsEndpointProps {
   endpoint: KubeObject;
 }
 
-@observer
-export class ServiceDetailsEndpoint extends React.Component<Props> {
-  render() {
-    const { endpoint } = this.props;
+interface Dependencies {
+  showDetails: ShowDetails;
+}
 
-    if (!endpoint && !endpointStore.isLoaded) return (
-      <div className="PodDetailsList flex justify-center"><Spinner/></div>
-    );
-
-    if (!endpoint) {
-      return null;
-    }
-
-    return (
-      <div className="EndpointList flex column">
-        <Table
-          selectable
-          virtual={false}
-          scrollable={false}
-          className="box grow"
-        >
-          <TableHead>
-            <TableCell className="name" >Name</TableCell>
-            <TableCell className="endpoints">Endpoints</TableCell>
-          </TableHead>
-          <TableRow
-            key={endpoint.getId()}
-            nowrap
-            onClick={prevDefault(() => showDetails(endpoint.selfLink, false))}
-          >
-            <TableCell className="name">{endpoint.getName()}</TableCell>
-            <TableCell className="endpoints">{ endpoint.toString()}</TableCell>
-          </TableRow>
-        </Table>
+const NonInjectedServiceDetailsEndpoint = observer(({
+  showDetails,
+  endpoint,
+}: Dependencies & ServiceDetailsEndpointProps) => {
+  if (!endpoint) {
+    return endpointStore.isLoaded && (
+      <div className="PodDetailsList flex justify-center">
+        <Spinner/>
       </div>
     );
   }
-}
+
+  return (
+    <div className="EndpointList flex column">
+      <Table
+        selectable
+        virtual={false}
+        scrollable={false}
+        className="box grow"
+      >
+        <TableHead>
+          <TableCell className="name" >Name</TableCell>
+          <TableCell className="endpoints">Endpoints</TableCell>
+        </TableHead>
+        <TableRow
+          key={endpoint.getId()}
+          nowrap
+          onClick={prevDefault(() => showDetails(endpoint, { resetSelected: false }))}
+        >
+          <TableCell className="name">{endpoint.getName()}</TableCell>
+          <TableCell className="endpoints">{ endpoint.toString()}</TableCell>
+        </TableRow>
+      </Table>
+    </div>
+  );
+});
+
+export const ServiceDetailsEndpoint = withInjectables<Dependencies, ServiceDetailsEndpointProps>(NonInjectedServiceDetailsEndpoint, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});

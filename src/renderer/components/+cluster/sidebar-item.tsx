@@ -6,24 +6,23 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import { observer } from "mobx-react";
 import React from "react";
 import { clusterRoute, clusterURL } from "../../../common/routes";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import allowedResourcesInjectable, { AllowedResources } from "../../clusters/allowed-resources.injectable";
 import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 
 export interface ClusterSidebarItemProps {}
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-const NonInjectedClusterSidebarItem = observer(({ isAllowedResource }: Dependencies & ClusterSidebarItemProps) => (
+const NonInjectedClusterSidebarItem = observer(({ allowedResources }: Dependencies & ClusterSidebarItemProps) => (
   <SidebarItem
     id="cluster"
     text="Cluster"
     isActive={isActiveRoute(clusterRoute)}
-    isHidden={!isAllowedResource("nodes")}
+    isHidden={!allowedResources.has("nodes")}
     url={clusterURL()}
     icon={<Icon svg="kube"/>}
   />
@@ -31,7 +30,7 @@ const NonInjectedClusterSidebarItem = observer(({ isAllowedResource }: Dependenc
 
 export const ClusterSidebarItem = withInjectables<Dependencies, ClusterSidebarItemProps>(NonInjectedClusterSidebarItem, {
   getProps: (di, props) => ({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
     ...props,
   }),
 });

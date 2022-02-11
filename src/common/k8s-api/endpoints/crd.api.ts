@@ -4,10 +4,12 @@
  */
 
 import { KubeCreationError, KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { crdResourcesURL } from "../../routes";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 import type { KubeJsonApiData } from "../kube-json-api";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 type AdditionalPrinterColumnsCommon = {
   name: string;
@@ -60,25 +62,22 @@ export interface CustomResourceDefinitionSpec {
   additionalPrinterColumns?: AdditionalPrinterColumnsV1Beta[];
 }
 
-export interface CustomResourceDefinition {
-  spec: CustomResourceDefinitionSpec;
-  status: {
-    conditions: {
-      lastTransitionTime: string;
-      message: string;
-      reason: string;
-      status: string;
-      type?: string;
-    }[];
-    acceptedNames: {
-      plural: string;
-      singular: string;
-      kind: string;
-      shortNames: string[];
-      listKind: string;
-    };
-    storedVersions: string[];
+export interface CustomResourceDefinitionStatus {
+  conditions: {
+    lastTransitionTime: string;
+    message: string;
+    reason: string;
+    status: string;
+    type?: string;
+  }[];
+  acceptedNames: {
+    plural: string;
+    singular: string;
+    kind: string;
+    shortNames: string[];
+    listKind: string;
   };
+  storedVersions: string[];
 }
 
 export interface CRDApiData extends KubeJsonApiData {
@@ -89,6 +88,9 @@ export class CustomResourceDefinition extends KubeObject {
   static kind = "CustomResourceDefinition";
   static namespaced = false;
   static apiBase = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions";
+
+  declare spec: CustomResourceDefinitionSpec;
+  declare status?: CustomResourceDefinitionStatus;
 
   constructor(data: CRDApiData) {
     super(data);
@@ -210,18 +212,15 @@ export class CustomResourceDefinition extends KubeObject {
   }
 }
 
-/**
- * Only available within kubernetes cluster pages
- */
-let crdApi: KubeApi<CustomResourceDefinition>;
-
-if (isClusterPageContext()) {
-  crdApi = new KubeApi<CustomResourceDefinition>({
-    objectConstructor: CustomResourceDefinition,
-    checkPreferredVersion: true,
-  });
+export class CustomResourceDefinitionApi extends KubeApi<CustomResourceDefinition> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: CustomResourceDefinition,
+    });
+  }
 }
 
-export {
-  crdApi,
-};
+export const crdApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new CustomResourceDefinitionApi()
+  : undefined;

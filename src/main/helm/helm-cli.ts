@@ -5,20 +5,18 @@
 
 import packageInfo from "../../../package.json";
 import path from "path";
-import { LensBinary, LensBinaryOpts } from "../lens-binary";
-import { isProduction } from "../../common/vars";
+import { LensBinary } from "../lens-binary";
+import assert from "assert";
 
 export class HelmCli extends LensBinary {
 
   public constructor(baseDir: string, version: string) {
-    const opts: LensBinaryOpts = {
+    super({
       version,
       baseDir,
       originalBinaryName: "helm",
       newBinaryName: "helm3",
-    };
-
-    super(opts);
+    });
   }
 
   protected getTarName(): string | null {
@@ -39,11 +37,11 @@ export class HelmCli extends LensBinary {
 }
 
 const helmVersion = packageInfo.config.bundledHelmVersion;
-let baseDir = process.resourcesPath;
+const baseDir = process.env.NODE_ENV === "production"
+  ? process.resourcesPath
+  : path.join(process.cwd(), "binaries", "client", process.arch);
 
-if (!isProduction) {
-  baseDir = path.join(process.cwd(), "binaries", "client", process.arch);
-}
+assert(typeof baseDir === "string", "baseDir MUST be a string");
 
 export const helmCli = new HelmCli(baseDir, helmVersion);
 

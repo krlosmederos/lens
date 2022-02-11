@@ -6,11 +6,10 @@
 import get from "lodash/get";
 import { autoBind } from "../../utils";
 import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import type { IPodContainer, IPodMetrics } from "./pods.api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import type { IPodContainer, IPodMetrics } from "./pod.api";
 import type { LabelSelector } from "../kube-object";
 
 export class Job extends WorkloadKubeObject {
@@ -104,6 +103,12 @@ export class Job extends WorkloadKubeObject {
 }
 
 export class JobApi extends KubeApi<Job> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: Job,
+      ...opts,
+    });
+  }
 }
 
 export function getMetricsForJobs(jobs: Job[], namespace: string, selector = ""): Promise<IPodMetrics> {
@@ -122,15 +127,3 @@ export function getMetricsForJobs(jobs: Job[], namespace: string, selector = "")
     namespace,
   });
 }
-
-let jobApi: JobApi;
-
-if (isClusterPageContext()) {
-  jobApi = new JobApi({
-    objectConstructor: Job,
-  });
-}
-
-export {
-  jobApi,
-};

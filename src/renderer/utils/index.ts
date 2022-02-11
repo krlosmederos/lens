@@ -17,4 +17,3 @@ export * from "./metricUnitsToNumber";
 export * from "./name-parts";
 export * from "./prevDefault";
 export * from "./saveFile";
-export * from "./storageHelper";

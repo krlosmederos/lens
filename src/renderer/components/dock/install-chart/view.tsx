@@ -21,14 +21,16 @@ import { LogsDialog } from "../../dialog/logs-dialog";
 import { Select, SelectOption } from "../../select";
 import { Input } from "../../input";
 import { EditorPanel } from "../editor-panel";
-import { navigate } from "../../../navigation";
 import { releaseURL } from "../../../../common/routes";
 import type { IReleaseCreatePayload, IReleaseUpdateDetails } from "../../../../common/k8s-api/endpoints/helm-releases.api";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import installChartTabStoreInjectable from "./store.injectable";
 import dockStoreInjectable from "../dock/store.injectable";
 import createReleaseInjectable from "../../+helm-releases/create-release/create-release.injectable";
-import { Notifications } from "../../notifications";
+import type { ErrorNotification } from "../../notifications/error.injectable";
+import errorNotificationInjectable from "../../notifications/error.injectable";
+import type { Navigate } from "../../../navigation/navigate.injectable";
+import navigateInjectable from "../../../navigation/navigate.injectable";
 
 interface Props {
   tab: DockTab;
@@ -38,6 +40,8 @@ interface Dependencies {
   createRelease: (payload: IReleaseCreatePayload) => Promise<IReleaseUpdateDetails>;
   installChartStore: InstallChartTabStore;
   dockStore: DockStore;
+  errorNotification: ErrorNotification;
+  navigate: Navigate;
 }
 
 @observer
@@ -52,7 +56,7 @@ class NonInjectedInstallChart extends Component<Props & Dependencies> {
 
   componentDidMount(): void {
     this.props.installChartStore.loadData(this.tabId)
-      .catch(err => Notifications.error(String(err)));
+      .catch(this.props.errorNotification);
   }
 
   get chartData() {
@@ -74,7 +78,7 @@ class NonInjectedInstallChart extends Component<Props & Dependencies> {
   viewRelease = () => {
     const { release } = this.releaseDetails;
 
-    navigate(releaseURL({
+    this.props.navigate(releaseURL({
       params: {
         name: release.name,
         namespace: release.namespace,
@@ -218,15 +222,13 @@ class NonInjectedInstallChart extends Component<Props & Dependencies> {
   }
 }
 
-export const InstallChart = withInjectables<Dependencies, Props>(
-  NonInjectedInstallChart,
-
-  {
-    getProps: (di, props) => ({
-      createRelease: di.inject(createReleaseInjectable),
-      installChartStore: di.inject(installChartTabStoreInjectable),
-      dockStore: di.inject(dockStoreInjectable),
-      ...props,
-    }),
-  },
-);
+export const InstallChart = withInjectables<Dependencies, Props>(NonInjectedInstallChart, {
+  getProps: (di, props) => ({
+    ...props,
+    createRelease: di.inject(createReleaseInjectable),
+    installChartStore: di.inject(installChartTabStoreInjectable),
+    dockStore: di.inject(dockStoreInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    navigate: di.inject(navigateInjectable),
+  }),
+});

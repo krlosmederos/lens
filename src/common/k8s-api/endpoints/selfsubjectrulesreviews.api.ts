@@ -4,10 +4,19 @@
  */
 
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
 export class SelfSubjectRulesReviewApi extends KubeApi<SelfSubjectRulesReview> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      objectConstructor: SelfSubjectRulesReview,
+      ...opts,
+    });
+  }
+
   create({ namespace = "default" }): Promise<SelfSubjectRulesReview> {
     return super.create({}, {
       spec: {
@@ -71,15 +80,7 @@ export class SelfSubjectRulesReview extends KubeObject {
   }
 }
 
-let selfSubjectRulesReviewApi: SelfSubjectRulesReviewApi;
-
-if (isClusterPageContext()) {
-  selfSubjectRulesReviewApi = new SelfSubjectRulesReviewApi({
-    objectConstructor: SelfSubjectRulesReview,
-  });
-}
-
-export {
-  selfSubjectRulesReviewApi,
-};
+export const selfSubjectRulesReviewApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new SelfSubjectRulesReviewApi()
+  : undefined;
 

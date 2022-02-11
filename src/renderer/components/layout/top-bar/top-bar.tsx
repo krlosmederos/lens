@@ -8,19 +8,25 @@ import React, { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import type { IComputedValue } from "mobx";
 import { Icon } from "../../icon";
-import { observable } from "mobx";
-import { ipcRendererOn } from "../../../../common/ipc";
-import { watchHistoryState } from "../../../remote-helpers/history-updater";
-import { isActiveRoute, navigate } from "../../../navigation";
 import { catalogRoute, catalogURL } from "../../../../common/routes";
 import { cssNames } from "../../../utils";
 import topBarItemsInjectable from "./top-bar-items/top-bar-items.injectable";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import type { TopBarRegistration } from "./top-bar-registration";
-import { emitOpenAppMenuAsContextMenu, requestWindowAction } from "../../../ipc";
-import { WindowAction } from "../../../../common/ipc/window";
 import isLinuxInjectable from "../../../../common/vars/is-linux.injectable";
 import isWindowsInjectable from "../../../../common/vars/is-windows.injectable";
+import type { Navigate } from "../../../navigation/navigate.injectable";
+import type { TopBarState } from "./state.injectable";
+import navigateInjectable from "../../../navigation/navigate.injectable";
+import topBarStateInjectable from "./state.injectable";
+import { TriggerWindowAction, WindowAction } from "../../../../common/ipc/window/trigger-action.token";
+import type { WindowOpenAppContextMenu } from "../../../../common/ipc/window/open-app-context-menu.token";
+import type { WatchLocation } from "../../../ipc/history/helpers/watch-location.injectable";
+import watchLocationInjectable from "../../../ipc/history/helpers/watch-location.injectable";
+import windowOpenAppContextMenuInjectable from "../../../ipc/window/open-app-context-menu.injectable";
+import triggerWindowActionInjectable from "../../../ipc/window/trigger-action.injectable";
+import type { IsRouteActive } from "../../../navigation/is-route-active.injectable";
+import isRouteActiveInjectable from "../../../navigation/is-route-active.injectable";
 
 export interface TopBarProps extends React.HTMLAttributes<any> {}
 
@@ -28,37 +34,35 @@ interface Dependencies {
   items: IComputedValue<TopBarRegistration[]>;
   isWindows: boolean;
   isLinux: boolean;
+  navigate: Navigate;
+  state: TopBarState;
+  triggerWindowAction: TriggerWindowAction;
+  openAppContextMenu: WindowOpenAppContextMenu;
+  watchLocation: WatchLocation;
+  isRouteActive: IsRouteActive;
 }
 
-const prevEnabled = observable.box(false);
-const nextEnabled = observable.box(false);
-
-ipcRendererOn("history:can-go-back", (event, state: boolean) => {
-  prevEnabled.set(state);
-});
-
-ipcRendererOn("history:can-go-forward", (event, state: boolean) => {
-  nextEnabled.set(state);
-});
-
-const NonInjectedTopBar = observer(({ items, children, isWindows, isLinux, ...rest }: TopBarProps & Dependencies) => {
+const NonInjectedTopBar = observer(({
+  items,
+  children,
+  isWindows,
+  isLinux,
+  navigate,
+  state,
+  triggerWindowAction,
+  openAppContextMenu,
+  watchLocation,
+  isRouteActive,
+  ...rest
+}: TopBarProps & Dependencies) => {
   const elem = useRef<HTMLDivElement>();
 
-  const openAppContextMenu = () => {
-    emitOpenAppMenuAsContextMenu();
-  };
-
-  const goHome = () => {
-    navigate(catalogURL());
-  };
-
-  const goBack = () => {
-    requestWindowAction(WindowAction.GO_BACK);
-  };
-
-  const goForward = () => {
-    requestWindowAction(WindowAction.GO_FORWARD);
-  };
+  const goHome = () => navigate(catalogURL());
+  const goBack = () => triggerWindowAction(WindowAction.GO_BACK);
+  const goForward = () => triggerWindowAction(WindowAction.GO_FORWARD);
+  const minimizeWindow = () => triggerWindowAction(WindowAction.MINIMIZE);
+  const toggleMaximize = () => triggerWindowAction(WindowAction.TOGGLE_MAXIMIZE);
+  const closeWindow = () => triggerWindowAction(WindowAction.CLOSE);
 
   const windowSizeToggle = (evt: React.MouseEvent) => {
     if (elem.current != evt.target) {
@@ -69,19 +73,7 @@ const NonInjectedTopBar = observer(({ items, children, isWindows, isLinux, ...re
     toggleMaximize();
   };
 
-  const minimizeWindow = () => {
-    requestWindowAction(WindowAction.MINIMIZE);
-  };
-
-  const toggleMaximize = () => {
-    requestWindowAction(WindowAction.TOGGLE_MAXIMIZE);
-  };
-
-  const closeWindow = () => {
-    requestWindowAction(WindowAction.CLOSE);
-  };
-
-  useEffect(() => watchHistoryState(), []);
+  useEffect(watchLocation, []);
 
   return (
     <div className={styles.topBar} onDoubleClick={windowSizeToggle} ref={elem} {...rest}>
@@ -102,21 +94,21 @@ const NonInjectedTopBar = observer(({ items, children, isWindows, isLinux, ...re
           material="home"
           className="ml-4"
           onClick={goHome}
-          disabled={isActiveRoute(catalogRoute)}
+          disabled={isRouteActive(catalogRoute)}
         />
         <Icon
           data-testid="history-back"
           material="arrow_back"
           className="ml-5"
           onClick={goBack}
-          disabled={!prevEnabled.get()}
+          disabled={!state.prevEnabled}
         />
         <Icon
           data-testid="history-forward"
           material="arrow_forward"
           className="ml-5"
           onClick={goForward}
-          disabled={!nextEnabled.get()}
+          disabled={!state.nextEnabled}
         />
       </div>
       <div className={styles.controls}>
@@ -162,13 +154,17 @@ const renderRegisteredItems = (items: TopBarRegistration[]) => (
   </div>
 );
 
-
-
 export const TopBar = withInjectables<Dependencies, TopBarProps>(NonInjectedTopBar, {
   getProps: (di, props) => ({
+    ...props,
     items: di.inject(topBarItemsInjectable),
     isLinux: di.inject(isLinuxInjectable),
     isWindows: di.inject(isWindowsInjectable),
-    ...props,
+    navigate: di.inject(navigateInjectable),
+    state: di.inject(topBarStateInjectable),
+    watchLocation: di.inject(watchLocationInjectable),
+    openAppContextMenu: di.inject(windowOpenAppContextMenuInjectable),
+    triggerWindowAction: di.inject(triggerWindowActionInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
   }),
 });

@@ -4,16 +4,16 @@
  */
 
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import { asLegacyGlobalForExtensionApi } from "../../../extensions/di-legacy-globals/for-extension-api";
+import { createStoresAndApisInjectionToken } from "../../vars/create-stores-apis.token";
 
-export interface Role {
-  rules: {
-    verbs: string[];
-    apiGroups: string[];
-    resources: string[];
-    resourceNames?: string[];
-  }[];
+export interface RoleRule {
+  verbs: string[];
+  apiGroups: string[];
+  resources: string[];
+  resourceNames?: string[];
 }
 
 export class Role extends KubeObject {
@@ -21,19 +21,22 @@ export class Role extends KubeObject {
   static namespaced = true;
   static apiBase = "/apis/rbac.authorization.k8s.io/v1/roles";
 
+  declare rules?: RoleRule[];
+
   getRules() {
     return this.rules || [];
   }
 }
 
-let roleApi: KubeApi<Role>;
-
-if (isClusterPageContext()) {
-  roleApi = new KubeApi<Role>({
-    objectConstructor: Role,
-  });
+export class RoleApi extends KubeApi<Role> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Role,
+    });
+  }
 }
 
-export{
-  roleApi,
-};
+export const roleApi = asLegacyGlobalForExtensionApi(createStoresAndApisInjectionToken)
+  ? new RoleApi()
+  : undefined;

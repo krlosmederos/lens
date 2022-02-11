@@ -7,7 +7,10 @@
 
 import moment from "moment";
 import { apiBase } from "../index";
-import type { IMetricsQuery } from "../../../main/routes/metrics-route";
+
+export type IMetricsQuery = string | string[] | {
+  [metricName: string]: string;
+};
 
 export interface IMetrics {
   status: string;

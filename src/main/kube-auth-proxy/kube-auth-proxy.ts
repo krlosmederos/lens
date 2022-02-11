@@ -3,10 +3,11 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { ChildProcess, spawn } from "child_process";
+import type { ChildProcess } from "child_process";
+import { spawn } from "child_process";
 import { waitUntilUsed } from "tcp-port-used";
 import { randomBytes } from "crypto";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import logger from "../logger";
 import * as url from "url";
 import { getPortFrom } from "../utils/get-port";

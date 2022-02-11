@@ -8,7 +8,6 @@ import "./release-details.scss";
 import React, { Component } from "react";
 import groupBy from "lodash/groupBy";
 import { computed, IComputedValue, makeObservable, observable } from "mobx";
-import { Link } from "react-router-dom";
 import kebabCase from "lodash/kebabCase";
 import type { HelmRelease, IReleaseDetails, IReleaseUpdateDetails, IReleaseUpdatePayload } from "../../../../common/k8s-api/endpoints/helm-releases.api";
 import { HelmReleaseMenu } from "../release-menu";
@@ -19,11 +18,7 @@ import { Observer, observer } from "mobx-react";
 import { Spinner } from "../../spinner";
 import { Table, TableCell, TableHead, TableRow } from "../../table";
 import { Button } from "../../button";
-import { Notifications } from "../../notifications";
-import { ThemeStore } from "../../../theme.store";
-import { apiManager } from "../../../../common/k8s-api/api-manager";
 import { SubTitle } from "../../layout/sub-title";
-import { getDetailsUrl } from "../../kube-detail-params";
 import { Checkbox } from "../../checkbox";
 import { MonacoEditor } from "../../monaco-editor";
 import { IAsyncComputed, withInjectables } from "@ogre-tools/injectable-react";
@@ -32,9 +27,16 @@ import updateReleaseInjectable from "../update-release/update-release.injectable
 import releaseInjectable from "./release.injectable";
 import releaseDetailsInjectable from "./release-details.injectable";
 import releaseValuesInjectable from "./release-values.injectable";
-import userSuppliedValuesAreShownInjectable from "./user-supplied-values-are-shown.injectable";
+import userSuppliedValuesAreShownInjectable, { UserSuppliedValuesAreShown } from "./user-supplied-values-are-shown.injectable";
+import type { OkNotification } from "../../notifications/ok.injectable";
+import type { ErrorNotification } from "../../notifications/error.injectable";
+import activeThemeInjectable, { ActiveTheme } from "../../../themes/active.injectable";
+import errorNotificationInjectable from "../../notifications/error.injectable";
+import okNotificationInjectable from "../../notifications/ok.injectable";
+import type { ShowDetails } from "../../kube-object/details/show.injectable";
+import showDetailsInjectable from "../../kube-object/details/show.injectable";
 
-interface Props {
+export interface ReleaseDetailsProps {
   hideDetails(): void;
 }
 
@@ -44,16 +46,20 @@ interface Dependencies {
   releaseValues: IAsyncComputed<string>;
   updateRelease: (name: string, namespace: string, payload: IReleaseUpdatePayload) => Promise<IReleaseUpdateDetails>;
   createUpgradeChartTab: (release: HelmRelease) => void;
-  userSuppliedValuesAreShown: { toggle: () => void; value: boolean };
+  userSuppliedValuesAreShown: UserSuppliedValuesAreShown;
+  okNotification: OkNotification;
+  errorNotification: ErrorNotification;
+  activeTheme: ActiveTheme;
+  showDetails: ShowDetails;
 }
 
 @observer
-class NonInjectedReleaseDetails extends Component<Props & Dependencies> {
+class NonInjectedReleaseDetails extends Component<ReleaseDetailsProps & Dependencies> {
   @observable saving = false;
 
   private nonSavedValues: string;
 
-  constructor(props: Props & Dependencies) {
+  constructor(props: ReleaseDetailsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -80,22 +86,17 @@ class NonInjectedReleaseDetails extends Component<Props & Dependencies> {
 
     try {
       await this.props.updateRelease(name, namespace, data);
-      Notifications.ok(
-        <p>Release <b>{name}</b> successfully updated!</p>,
-      );
-
+      this.props.okNotification(<p>Release <b>{name}</b> successfully updated!</p>);
       this.props.releaseValues.invalidate();
     } catch (err) {
-      Notifications.error(err);
+      this.props.errorNotification(err);
     }
     this.saving = false;
   };
 
   upgradeVersion = () => {
-    const { hideDetails } = this.props;
-
     this.props.createUpgradeChartTab(this.release);
-    hideDetails();
+    this.props.hideDetails();
   };
 
   renderValues() {
@@ -150,45 +151,47 @@ class NonInjectedReleaseDetails extends Component<Props & Dependencies> {
     );
   }
 
+  renderNamespace(namespace: string | undefined) {
+    if (namespace) {
+      return <TableCell className="namespace">{namespace}</TableCell>;
+    }
+
+    return undefined;
+  }
+
   renderResources() {
     const { resources } = this.details;
 
-    if (!resources) return null;
-    const groups = groupBy(resources, item => item.kind);
-    const tables = Object.entries(groups).map(([kind, items]) => {
-      return (
-        <React.Fragment key={kind}>
-          <SubTitle title={kind}/>
-          <Table scrollable={false}>
-            <TableHead sticky={false}>
-              <TableCell className="name">Name</TableCell>
-              {items[0].getNs() && <TableCell className="namespace">Namespace</TableCell>}
-              <TableCell className="age">Age</TableCell>
-            </TableHead>
-            {items.map(item => {
-              const name = item.getName();
-              const namespace = item.getNs();
-              const api = apiManager.getApi(api => api.kind === kind && api.apiVersionWithGroup == item.apiVersion);
-              const detailsUrl = api ? getDetailsUrl(api.getUrl({ name, namespace })) : "";
-
-              return (
-                <TableRow key={item.getId()}>
-                  <TableCell className="name">
-                    {detailsUrl ? <Link to={detailsUrl}>{name}</Link> : name}
-                  </TableCell>
-                  {namespace && <TableCell className="namespace">{namespace}</TableCell>}
-                  <TableCell className="age">{item.getAge()}</TableCell>
-                </TableRow>
-              );
-            })}
-          </Table>
-        </React.Fragment>
-      );
-    });
+    if (!resources) {
+      return null;
+    }
 
     return (
       <div className="resources">
-        {tables}
+        {
+          Object.entries(groupBy(resources, item => item.kind))
+            .map(([kind, items]) => (
+              <React.Fragment key={kind}>
+                <SubTitle title={kind} />
+                <Table scrollable={false}>
+                  <TableHead sticky={false}>
+                    <TableCell className="name">Name</TableCell>
+                    {items[0].getNs() && <TableCell className="namespace">Namespace</TableCell>}
+                    <TableCell className="age">Age</TableCell>
+                  </TableHead>
+                  {items.map(item => (
+                    <TableRow key={item.getId()}>
+                      <TableCell className="name">
+                        <a onClick={() => this.props.showDetails(item.selfLink)}>{item.getName()}</a>
+                      </TableCell>
+                      {this.renderNamespace(item.getNs())}
+                      <TableCell className="age">{item.getAge()}</TableCell>
+                    </TableRow>
+                  ))}
+                </Table>
+              </React.Fragment>
+            ))
+        }
       </div>
     );
   }
@@ -248,7 +251,7 @@ class NonInjectedReleaseDetails extends Component<Props & Dependencies> {
 
     return (
       <Drawer
-        className={cssNames("ReleaseDetails", ThemeStore.getInstance().activeTheme.type)}
+        className={cssNames("ReleaseDetails", this.props.activeTheme.value.type)}
         usePortal={true}
         open={!!this.release}
         title={title}
@@ -261,20 +264,18 @@ class NonInjectedReleaseDetails extends Component<Props & Dependencies> {
   }
 }
 
-export const ReleaseDetails = withInjectables<Dependencies, Props>(
-  NonInjectedReleaseDetails,
-
-  {
-    getProps: (di, props) => ({
-      release: di.inject(releaseInjectable),
-      releaseDetails: di.inject(releaseDetailsInjectable),
-      releaseValues: di.inject(releaseValuesInjectable),
-
-      userSuppliedValuesAreShown: di.inject(userSuppliedValuesAreShownInjectable),
-
-      updateRelease: di.inject(updateReleaseInjectable),
-      createUpgradeChartTab: di.inject(createUpgradeChartTabInjectable),
-      ...props,
-    }),
-  },
-);
+export const ReleaseDetails = withInjectables<Dependencies, ReleaseDetailsProps>(NonInjectedReleaseDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    release: di.inject(releaseInjectable),
+    releaseDetails: di.inject(releaseDetailsInjectable),
+    releaseValues: di.inject(releaseValuesInjectable),
+    userSuppliedValuesAreShown: di.inject(userSuppliedValuesAreShownInjectable),
+    updateRelease: di.inject(updateReleaseInjectable),
+    createUpgradeChartTab: di.inject(createUpgradeChartTabInjectable),
+    activeTheme: di.inject(activeThemeInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    okNotification: di.inject(okNotificationInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});

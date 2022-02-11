@@ -15,14 +15,17 @@ import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store"
 import { KubeObjectMenu } from "../kube-object-menu";
 import { NamespaceSelectFilter } from "../+namespaces/namespace-select-filter";
 import { ResourceKindMap, ResourceNames } from "../../utils/rbac";
-import { kubeSelectedUrlParam, toggleDetails } from "../kube-detail-params";
 import { Icon } from "../icon";
 import { TooltipPosition } from "../tooltip";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import type { ClusterFrameContext } from "../../cluster-frame-context/cluster-frame-context";
 import clusterFrameContextInjectable from "../../cluster-frame-context/cluster-frame-context.injectable";
-import kubeWatchApiInjectable from "../../kube-watch-api/kube-watch-api.injectable";
 import type { KubeWatchSubscribeStoreOptions } from "../../kube-watch-api/kube-watch-api";
+import type { PageParam } from "../../navigation/page-param";
+import type { ToggleDetails } from "../kube-object/details/toggle.injectable";
+import kubeSelectedUrlParamInjectable from "../kube-object/details/selected.injectable";
+import toggleDetailsInjectable from "../kube-object/details/toggle.injectable";
+import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 
 type ItemListLayoutPropsWithoutGetItems<K extends KubeObject> = Omit<ItemListLayoutProps<K>, "getItems">;
 
@@ -34,20 +37,15 @@ export interface KubeObjectListLayoutProps<K extends KubeObject> extends ItemLis
   subscribeStores?: boolean;
 }
 
-const defaultProps: Partial<KubeObjectListLayoutProps<KubeObject>> = {
-  onDetails: (item: KubeObject) => toggleDetails(item.selfLink),
-  subscribeStores: true,
-};
-
 interface Dependencies {
   clusterFrameContext: ClusterFrameContext;
   subscribeToStores: (stores: KubeObjectStore<KubeObject>[], options: KubeWatchSubscribeStoreOptions) => Disposer;
+  kubeSelectedUrlParam: PageParam<string>;
+  toggleDetails: ToggleDetails;
 }
 
 @observer
 class NonInjectedKubeObjectListLayout<K extends KubeObject> extends React.Component<KubeObjectListLayoutProps<K> & Dependencies> {
-  static defaultProps = defaultProps as object;
-
   constructor(props: KubeObjectListLayoutProps<K> & Dependencies) {
     super(props);
     makeObservable(this);
@@ -56,11 +54,13 @@ class NonInjectedKubeObjectListLayout<K extends KubeObject> extends React.Compon
   @observable loadErrors: string[] = [];
 
   @computed get selectedItem() {
-    return this.props.store.getByPath(kubeSelectedUrlParam.get());
+    const { store, kubeSelectedUrlParam } = this.props;
+
+    return store.getByPath(kubeSelectedUrlParam.get());
   }
 
   componentDidMount() {
-    const { store, dependentStores = [], subscribeStores } = this.props;
+    const { store, dependentStores = [], subscribeStores = true } = this.props;
     const stores = Array.from(new Set([store, ...dependentStores]));
     const reactions: Disposer[] = [
       reaction(() => this.props.clusterFrameContext.contextNamespaces.slice(), () => {
@@ -102,7 +102,15 @@ class NonInjectedKubeObjectListLayout<K extends KubeObject> extends React.Compon
   }
 
   render() {
-    const { className, customizeHeader, store, items, ...layoutProps } = this.props;
+    const {
+      className,
+      customizeHeader,
+      store,
+      items,
+      toggleDetails,
+      onDetails = (item) => toggleDetails(item.selfLink),
+      ...layoutProps
+    } = this.props;
     const placeholderString = ResourceNames[ResourceKindMap[store.api.kind]] || store.api.kind;
 
     return (
@@ -135,6 +143,7 @@ class NonInjectedKubeObjectListLayout<K extends KubeObject> extends React.Compon
           ...[customizeHeader].flat(),
         ]}
         renderItemMenu={item => <KubeObjectMenu object={item} />}
+        onDetails={onDetails}
         {...layoutProps}
       />
     );
@@ -143,9 +152,11 @@ class NonInjectedKubeObjectListLayout<K extends KubeObject> extends React.Compon
 
 const InjectedKubeObjectListLayout = withInjectables<Dependencies, KubeObjectListLayoutProps<KubeObject>>(NonInjectedKubeObjectListLayout, {
   getProps: (di, props) => ({
-    clusterFrameContext: di.inject(clusterFrameContextInjectable),
-    subscribeToStores: di.inject(kubeWatchApiInjectable).subscribeStores,
     ...props,
+    clusterFrameContext: di.inject(clusterFrameContextInjectable),
+    subscribeToStores: di.inject(subscribeStoresInjectable),
+    kubeSelectedUrlParam: di.inject(kubeSelectedUrlParamInjectable),
+    toggleDetails: di.inject(toggleDetailsInjectable),
   }),
 });
 

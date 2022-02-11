@@ -6,22 +6,28 @@
 import get from "lodash/get";
 import { autoBind } from "../../../renderer/utils";
 import { WorkloadKubeObject } from "../workload-kube-object";
-import { KubeApi } from "../kube-api";
+import { DerivedKubeApiOptions, KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
-import type { IPodContainer, IPodMetrics, Pod } from "./pods.api";
+import type { IPodContainer, IPodMetrics, Pod } from "./pod.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 import type { LabelSelector } from "../kube-object";
 
 export class ReplicaSetApi extends KubeApi<ReplicaSet> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: ReplicaSet,
+      ...opts,
+    });
+  }
+
   protected getScaleApiUrl(params: { namespace: string; name: string }) {
     return `${this.getUrl(params)}/scale`;
   }
 
-  getReplicas(params: { namespace: string; name: string }): Promise<number> {
-    return this.request
-      .get(this.getScaleApiUrl(params))
-      .then(({ status }: any) => status?.replicas);
+  async getReplicas(params: { namespace: string; name: string }): Promise<number> {
+    const { status } = await this.request.get(this.getScaleApiUrl(params)) as { status?: { replicas?: number }};
+
+    return status?.replicas ?? 0;
   }
 
   scale(params: { namespace: string; name: string }, replicas: number) {
@@ -110,15 +116,3 @@ export class ReplicaSet extends WorkloadKubeObject {
     return [...containers].map(container => container.image);
   }
 }
-
-let replicaSetApi: ReplicaSetApi;
-
-if (isClusterPageContext()) {
-  replicaSetApi = new ReplicaSetApi({
-    objectConstructor: ReplicaSet,
-  });
-}
-
-export {
-  replicaSetApi,
-};
