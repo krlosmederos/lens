@@ -21,7 +21,7 @@ node_modules: yarn.lock
 	yarn check --verify-tree --integrity
 
 binaries/client: node_modules
-	yarn download-bins
+	yarn download:binaries
 
 static/build/LensDev.html: node_modules
 	yarn compile:renderer
