@@ -134,7 +134,7 @@
         },
         {
           "from": "binaries/client/linux/${arch}/helm",
-          "to": "./${arch}/helm"
+          "to": "./helm"
         }
       ]
     },
@@ -159,7 +159,7 @@
         },
         {
           "from": "binaries/client/darwin/${arch}/helm",
-          "to": "./${arch}/helm"
+          "to": "./helm"
         }
       ]
     },
@@ -186,7 +186,7 @@
         },
         {
           "from": "binaries/client/windows/x64/helm.exe",
-          "to": "./x64/helm.exe"
+          "to": "./helm.exe"
         }
       ]
     },
